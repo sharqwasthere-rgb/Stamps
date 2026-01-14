@@ -55,8 +55,11 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 
 // Add Entity Framework and PostgreSQL (Supabase)
+// Try multiple ways to get connection string (Render, Railway, etc.)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? builder.Configuration["ConnectionStrings:DefaultConnection"]
     ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found. Please set it in appsettings.json or DATABASE_URL environment variable.");
 
 // Handle Supabase connection string format if needed (postgres://user:pass@host:port/db)
