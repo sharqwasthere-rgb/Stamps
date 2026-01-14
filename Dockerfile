@@ -22,4 +22,6 @@ WORKDIR /app
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 COPY --from=publish /app/publish .
+# Ensure appsettings.json is included (copy from build stage if not in publish)
+COPY --from=build /src/Stamps.Web/appsettings.json /app/appsettings.json
 ENTRYPOINT ["dotnet", "Stamps.Web.dll"]
