@@ -37,6 +37,9 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 // Add HttpContextAccessor for audit fields
 builder.Services.AddHttpContextAccessor();
 
+// Add distributed cache (required for session)
+builder.Services.AddDistributedMemoryCache();
+
 // Add session support (for WebPreferencesService)
 builder.Services.AddSession(options =>
 {
