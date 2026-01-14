@@ -75,14 +75,11 @@ builder.Services.AddSingleton<IPreferencesService, WebPreferencesService>();
 builder.Services.AddSingleton<AuthStateService>();
 
 // Add Entity Framework and PostgreSQL (Supabase)
-// Get connection string from configuration (which includes environment variables)
-// Check DATABASE_URL first (for Render/Railway), then DefaultConnection
-var connectionString = builder.Configuration["DATABASE_URL"]
+// Get connection string - prioritize environment variable directly
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration["DATABASE_URL"]
     ?? builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? (string.IsNullOrWhiteSpace(builder.Configuration["ConnectionStrings:DefaultConnection"]) 
-        ? null 
-        : builder.Configuration["ConnectionStrings:DefaultConnection"])
-    ?? throw new InvalidOperationException("Connection string not found. Please set DATABASE_URL environment variable.");
+    ?? throw new InvalidOperationException($"Connection string not found. DATABASE_URL env var: {(Environment.GetEnvironmentVariable("DATABASE_URL") != null ? "EXISTS" : "NULL")}, Config DATABASE_URL: {builder.Configuration["DATABASE_URL"] ?? "NULL"}");
 
 // Handle Supabase connection string format if needed (postgres://user:pass@host:port/db)
 if (connectionString.StartsWith("postgres://"))
