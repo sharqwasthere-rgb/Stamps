@@ -1,0 +1,674 @@
+@page "/Account/Register"
+@implements IDisposable
+@inject Stamps.Shared.Services.IApiService ApiService
+@inject Stamps.Shared.Services.AuthStateService AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Register - Stamps</PageTitle>
+
+<style>
+    .register-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .register-card {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        max-width: 500px;
+        width: 100%;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    .register-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+
+    .register-subtitle {
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.8rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-register {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .btn-register:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-register:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .signin-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: #666;
+    }
+
+    .signin-link a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+
+    .alert-danger {
+        background: #fee;
+        color: #c33;
+        border: 1px solid #fcc;
+    }
+
+    .alert-success {
+        background: #efe;
+        color: #3c3;
+        border: 1px solid #cfc;
+    }
+
+    .autocomplete-container {
+        position: relative;
+    }
+
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 2px solid #667eea;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .suggestion-item {
+        padding: 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s ease;
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+        background: #f8f9ff;
+    }
+
+    .suggestion-main {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .suggestion-details {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .loading-suggestions {
+        padding: 1rem;
+        text-align: center;
+        color: #667eea;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="register-container">
+    <div class="register-card">
+        <h1 class="register-title">Create Account</h1>
+        <p class="register-subtitle">
+            @if (selectedUserType == "StoreOwner")
+            {
+                <span>Register as a Store Owner</span>
+            }
+            else
+            {
+                <span>Join as a Customer</span>
+            }
+        </p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">
+                @successMessage
+            </div>
+        }
+
+        <div>
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-control" @bind="fullName" placeholder="Enter your full name" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" @bind="email" placeholder="Enter your email" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" @bind="password" @bind:event="oninput" placeholder="Create a password" />
+                @if (!string.IsNullOrEmpty(password))
+                {
+                    <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+                        <div style="color: @(password.Length >= 6 ? "#22c55e" : "#ef4444");">
+                            @(password.Length >= 6 ? "✓" : "✗") At least 6 characters
+                        </div>
+                        <div style="color: @(password.Any(char.IsUpper) ? "#22c55e" : "#ef4444");">
+                            @(password.Any(char.IsUpper) ? "✓" : "✗") One uppercase letter (A-Z)
+                        </div>
+                        <div style="color: @(password.Any(char.IsLower) ? "#22c55e" : "#ef4444");">
+                            @(password.Any(char.IsLower) ? "✓" : "✗") One lowercase letter (a-z)
+                        </div>
+                        <div style="color: @(password.Any(char.IsDigit) ? "#22c55e" : "#ef4444");">
+                            @(password.Any(char.IsDigit) ? "✓" : "✗") One number (0-9)
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <small style="color: #666; font-size: 0.875rem;">
+                        Example: Test123
+                    </small>
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" @bind="confirmPassword" placeholder="Confirm your password" />
+            </div>
+
+            @if (selectedUserType == "StoreOwner")
+            {
+                <div class="form-group">
+                    <label class="form-label">Store Name</label>
+                    <input type="text" class="form-control" @bind="storeName" placeholder="Enter your store name" />
+                </div>
+
+                <div class="form-group autocomplete-container">
+                    <label class="form-label">Store Address</label>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        value="@addressQuery"
+                        @oninput="OnAddressInput"
+                        placeholder="Type your address (e.g., via antonio labriola 1)" 
+                        autocomplete="off" />
+                    
+                    @if (isSearching)
+                    {
+                        <div class="autocomplete-suggestions">
+                            <div class="loading-suggestions">Searching...</div>
+                        </div>
+                    }
+                    else if (suggestions.Any())
+                    {
+                        <div class="autocomplete-suggestions">
+                            @foreach (var suggestion in suggestions)
+                            {
+                                <div class="suggestion-item" @onclick="() => SelectAddress(suggestion)">
+                                    <div class="suggestion-main">@suggestion.DisplayName</div>
+                                    <div class="suggestion-details">
+                                        @suggestion.City @(!string.IsNullOrEmpty(suggestion.PostalCode) ? ", " + suggestion.PostalCode : "") @suggestion.Country
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" class="form-control" @bind="city" placeholder="City" readonly style="background: #f8f8f8;" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Postal Code</label>
+                    <input type="text" class="form-control" @bind="postalCode" placeholder="Postal code" readonly style="background: #f8f8f8;" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">State/Province</label>
+                    <input type="text" class="form-control" @bind="state" placeholder="State (optional)" readonly style="background: #f8f8f8;" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Country</label>
+                    <input type="text" class="form-control" @bind="country" placeholder="Country" readonly style="background: #f8f8f8;" />
+                </div>
+            }
+
+            <button type="button" class="btn-register" @onclick="HandleRegister" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>Creating Account...</span>
+                }
+                else
+                {
+                    <span>Create Account</span>
+                }
+            </button>
+        </div>
+
+        <div class="signin-link">
+            Already have an account? <a href="/Account/Login">Sign In</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string fullName = string.Empty;
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private string confirmPassword = string.Empty;
+    private string? storeName;
+    private string? storeAddress;
+    private string? city;
+    private string? state;
+    private string? postalCode;
+    private string? country;
+    private double? latitude;
+    private double? longitude;
+    
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isLoading = false;
+    private string selectedUserType = "Client";
+    
+    private string addressQuery = string.Empty;
+    private List<AddressSuggestion> suggestions = new();
+    private bool isSearching = false;
+    private System.Threading.Timer? searchTimer;
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? userType { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(userType))
+        {
+            selectedUserType = userType;
+        }
+    }
+
+    private void OnAddressInput(ChangeEventArgs e)
+    {
+        addressQuery = e.Value?.ToString() ?? string.Empty;
+        
+        searchTimer?.Dispose();
+        searchTimer = new System.Threading.Timer(async _ =>
+        {
+            await SearchAddress();
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private async Task SearchAddress()
+    {
+        if (string.IsNullOrWhiteSpace(addressQuery) || addressQuery.Length < 3)
+        {
+            suggestions.Clear();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        isSearching = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "StampsApp/1.0");
+            
+            var response = await httpClient.GetFromJsonAsync<List<NominatimResult>>(
+                $"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(addressQuery)}&format=json&addressdetails=1&limit=5"
+            );
+
+            if (response != null)
+            {
+                suggestions = response.Select(r => new AddressSuggestion
+                {
+                    DisplayName = r.display_name ?? "",
+                    Road = r.address?.road ?? r.address?.street ?? "",
+                    HouseNumber = r.address?.house_number ?? "",
+                    City = r.address?.city ?? r.address?.town ?? r.address?.village ?? "",
+                    State = r.address?.state ?? r.address?.province ?? "",
+                    PostalCode = r.address?.postcode ?? "",
+                    Country = r.address?.country ?? "",
+                    Latitude = double.TryParse(r.lat, out var lat) ? lat : 0,
+                    Longitude = double.TryParse(r.lon, out var lon) ? lon : 0
+                }).ToList();
+            }
+        }
+        catch
+        {
+            suggestions.Clear();
+        }
+        finally
+        {
+            isSearching = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void SelectAddress(AddressSuggestion suggestion)
+    {
+        // Build the street address (road + house number if available)
+        string streetAddress;
+        if (!string.IsNullOrEmpty(suggestion.HouseNumber) && !string.IsNullOrEmpty(suggestion.Road))
+        {
+            streetAddress = $"{suggestion.Road}, {suggestion.HouseNumber}";
+        }
+        else if (!string.IsNullOrEmpty(suggestion.Road))
+        {
+            streetAddress = suggestion.Road;
+        }
+        else
+        {
+            // Fallback: use first part of display name (before the city)
+            var displayParts = suggestion.DisplayName.Split(',');
+            streetAddress = displayParts.Length > 0 ? displayParts[0].Trim() : suggestion.DisplayName;
+        }
+        
+        storeAddress = streetAddress;
+        city = suggestion.City;
+        state = suggestion.State;
+        postalCode = suggestion.PostalCode;
+        country = suggestion.Country;
+        latitude = suggestion.Latitude;
+        longitude = suggestion.Longitude;
+        
+        // Update the address input field with the street address
+        addressQuery = streetAddress;
+        suggestions.Clear();
+        StateHasChanged();
+    }
+
+    private async Task HandleRegister()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Please fill in all required fields.";
+            return;
+        }
+
+        // Validate email format
+        if (!IsValidEmail(email))
+        {
+            errorMessage = "Please enter a valid email address";
+            return;
+        }
+
+        // Validate domain exists (DNS check - FREE)
+        if (!await ValidateDomainAsync(email))
+        {
+            errorMessage = "Email domain doesn't exist. Please check for typos (e.g., gmail.com not gmial.com)";
+            return;
+        }
+
+        if (password != confirmPassword)
+        {
+            errorMessage = "Passwords do not match.";
+            return;
+        }
+
+        // Validate password requirements
+        if (password.Length < 6)
+        {
+            errorMessage = "Password must be at least 6 characters long.";
+            return;
+        }
+
+        if (!password.Any(char.IsUpper))
+        {
+            errorMessage = "Password must contain at least one uppercase letter (A-Z).";
+            return;
+        }
+
+        if (!password.Any(char.IsLower))
+        {
+            errorMessage = "Password must contain at least one lowercase letter (a-z).";
+            return;
+        }
+
+        if (!password.Any(char.IsDigit))
+        {
+            errorMessage = "Password must contain at least one number (0-9).";
+            return;
+        }
+
+        if (selectedUserType == "StoreOwner" && string.IsNullOrWhiteSpace(storeName))
+        {
+            errorMessage = "Please enter your store name.";
+            return;
+        }
+
+        if (selectedUserType == "StoreOwner" && string.IsNullOrWhiteSpace(city))
+        {
+            errorMessage = "Please select an address from the suggestions.";
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            var request = new Stamps.Shared.Services.RegisterRequest
+            {
+                FullName = fullName,
+                Email = email,
+                Password = password,
+                ConfirmPassword = confirmPassword,
+                UserType = selectedUserType,
+                StoreName = storeName,
+                StoreAddress = storeAddress,
+                City = city,
+                State = state,
+                PostalCode = postalCode,
+                Country = country,
+                Latitude = latitude,
+                Longitude = longitude
+            };
+
+            var response = await ApiService.RegisterAsync(request);
+
+            if (response.Success && response.Data != null)
+            {
+                // Save auth state
+                AuthState.Login(response.Data);
+                
+                successMessage = "Account created successfully! Redirecting...";
+                await Task.Delay(1000);
+                
+                // Navigate to appropriate dashboard
+                Navigation.NavigateTo(selectedUserType == "Client" ? "/Client/Dashboard" : "/Store/Dashboard");
+            }
+            else
+            {
+                errorMessage = response.ErrorMessage ?? "Registration failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        searchTimer?.Dispose();
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        try
+        {
+            // Basic format check using .NET's built-in validator
+            var addr = new System.Net.Mail.MailAddress(email);
+            if (addr.Address != email)
+                return false;
+
+            // Must have @ and a valid domain
+            var parts = email.Split('@');
+            if (parts.Length != 2)
+                return false;
+
+            var domain = parts[1];
+            
+            // Domain must have at least one dot
+            if (!domain.Contains('.'))
+                return false;
+
+            // Domain extension must be at least 2 characters (.co, .it, .com, etc.)
+            var lastDot = domain.LastIndexOf('.');
+            if (lastDot < 0 || domain.Length - lastDot < 3)
+                return false;
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<bool> ValidateDomainAsync(string email)
+    {
+        try
+        {
+            var domain = email.Split('@')[1];
+            
+            // DNS lookup to check if domain exists (100% FREE - built into .NET)
+            var hostEntry = await System.Net.Dns.GetHostEntryAsync(domain);
+            return hostEntry != null;
+        }
+        catch
+        {
+            // Domain doesn't exist or DNS lookup failed
+            return false;
+        }
+    }
+
+    private class AddressSuggestion
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public string Road { get; set; } = string.Empty;
+        public string HouseNumber { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
+    private class NominatimResult
+    {
+        public string? display_name { get; set; }
+        public string? lat { get; set; }
+        public string? lon { get; set; }
+        public NominatimAddress? address { get; set; }
+    }
+
+    private class NominatimAddress
+    {
+        public string? road { get; set; }
+        public string? street { get; set; }
+        public string? house_number { get; set; }
+        public string? city { get; set; }
+        public string? town { get; set; }
+        public string? village { get; set; }
+        public string? state { get; set; }
+        public string? province { get; set; }
+        public string? postcode { get; set; }
+        public string? country { get; set; }
+    }
+}
+

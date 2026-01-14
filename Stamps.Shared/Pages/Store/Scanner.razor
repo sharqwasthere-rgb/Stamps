@@ -1,0 +1,545 @@
+@page "/Store/Scanner"
+@inject NavigationManager Navigation
+@inject HttpClient HttpClient
+@inject Stamps.Shared.Services.AuthStateService AuthState
+@inject IJSRuntime JS
+
+<PageTitle>Scanner QR - Stamps</PageTitle>
+
+<style>
+    .scanner-page {
+        min-height: 100vh;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .scanner-header {
+        padding: 20px;
+        padding-top: calc(20px + env(safe-area-inset-top, 0px));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(0,0,0,0.8);
+        z-index: 10;
+    }
+
+    .back-btn {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .scanner-title {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .placeholder {
+        width: 44px;
+    }
+
+    .scanner-container {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #video-container {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    #video-container video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .scan-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+
+    .scan-frame {
+        width: 280px;
+        height: 280px;
+        border: 3px solid white;
+        border-radius: 20px;
+        position: relative;
+        box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+    }
+
+    .scan-frame::before,
+    .scan-frame::after {
+        content: '';
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border-color: #FFD700;
+        border-style: solid;
+    }
+
+    .scan-frame::before {
+        top: -3px;
+        left: -3px;
+        border-width: 4px 0 0 4px;
+        border-radius: 20px 0 0 0;
+    }
+
+    .scan-frame::after {
+        top: -3px;
+        right: -3px;
+        border-width: 4px 4px 0 0;
+        border-radius: 0 20px 0 0;
+    }
+
+    .scan-corners-bottom {
+        position: absolute;
+        bottom: -3px;
+        left: -3px;
+        right: -3px;
+        height: 40px;
+    }
+
+    .scan-corners-bottom::before,
+    .scan-corners-bottom::after {
+        content: '';
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border-color: #FFD700;
+        border-style: solid;
+    }
+
+    .scan-corners-bottom::before {
+        bottom: 0;
+        left: 0;
+        border-width: 0 0 4px 4px;
+        border-radius: 0 0 0 20px;
+    }
+
+    .scan-corners-bottom::after {
+        bottom: 0;
+        right: 0;
+        border-width: 0 4px 4px 0;
+        border-radius: 0 0 20px 0;
+    }
+
+    .scan-line {
+        position: absolute;
+        top: 0;
+        left: 10px;
+        right: 10px;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #FFD700, transparent);
+        animation: scan 2s linear infinite;
+    }
+
+    @@keyframes scan {
+        0% { top: 10px; }
+        50% { top: calc(100% - 13px); }
+        100% { top: 10px; }
+    }
+
+    .scanner-info {
+        padding: 30px 20px;
+        padding-bottom: calc(30px + env(safe-area-inset-bottom, 20px));
+        background: rgba(0,0,0,0.8);
+        text-align: center;
+    }
+
+    .card-type-badge {
+        background: #FFD700;
+        color: #333;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+
+    .stamps-info {
+        color: white;
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .stamps-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #FFD700;
+    }
+
+    .instruction {
+        color: rgba(255,255,255,0.7);
+        font-size: 0.9rem;
+    }
+
+    /* Result overlay */
+    .result-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    .result-overlay.show {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .result-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        width: 90%;
+        max-width: 350px;
+        text-align: center;
+    }
+
+    .result-card.success {
+        border-top: 5px solid #28a745;
+    }
+
+    .result-card.error {
+        border-top: 5px solid #dc3545;
+    }
+
+    .result-icon {
+        font-size: 4rem;
+        margin-bottom: 15px;
+    }
+
+    .result-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+
+    .result-card p {
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .stamps-result {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stamps-count {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+
+    .result-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    .result-btn {
+        flex: 1;
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+
+    .result-btn.secondary {
+        background: #f5f5f5;
+        color: #333;
+    }
+
+    .result-btn.primary {
+        background: #667eea;
+        color: white;
+    }
+
+    .error-message {
+        color: white;
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .error-message h2 {
+        margin-bottom: 15px;
+    }
+
+    .error-message p {
+        color: rgba(255,255,255,0.7);
+        margin-bottom: 20px;
+    }
+
+    .retry-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+</style>
+
+<div class="scanner-page">
+    <div class="scanner-header">
+        <button class="back-btn" @onclick="GoBack">←</button>
+        <span class="scanner-title">Scansiona QR Cliente</span>
+        <div class="placeholder"></div>
+    </div>
+
+    @if (cameraError)
+    {
+        <div class="scanner-container">
+            <div class="error-message">
+                <h2>📷 Fotocamera non disponibile</h2>
+                <p>@errorMessage</p>
+                <button class="retry-btn" @onclick="StartCamera">Riprova</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="scanner-container">
+            <div id="video-container"></div>
+            <div class="scan-overlay">
+                <div class="scan-frame">
+                    <div class="scan-line"></div>
+                    <div class="scan-corners-bottom"></div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="scanner-info">
+        <div class="card-type-badge">@cardTypeName</div>
+        <div class="stamps-info">
+            Timbri da aggiungere: <span class="stamps-value">@stampsToAdd</span>
+        </div>
+        <p class="instruction">Inquadra il QR code del cliente</p>
+    </div>
+</div>
+
+<!-- Result Modal -->
+<div class="result-overlay @(showResult ? "show" : "")">
+    <div class="result-card @(resultSuccess ? "success" : "error")">
+        <div class="result-icon">@(resultSuccess ? "✓" : "✗")</div>
+        <h3>@resultTitle</h3>
+        <p>@resultMessage</p>
+        @if (resultSuccess && stampResult != null)
+        {
+            <div class="stamps-result">
+                <div class="stamps-count">@stampResult.CurrentStamps / @stampResult.RequiredStamps</div>
+                <div>Timbri</div>
+                @if (stampResult.IsComplete)
+                {
+                    <div style="color: #28a745; font-weight: 600; margin-top: 10px;">🎉 Carta Completata!</div>
+                }
+            </div>
+        }
+        <div class="result-buttons">
+            <button class="result-btn secondary" @onclick="GoBack">Chiudi</button>
+            <button class="result-btn primary" @onclick="ScanAgain">Scansiona Altro</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string BaseUrl = "https://byssal-janene-lyingly.ngrok-free.dev";
+
+    [SupplyParameterFromQuery]
+    public int CardTypeId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? CardTypeName { get; set; }
+
+    [SupplyParameterFromQuery]
+    public int StampsToAdd { get; set; } = 1;
+
+    [SupplyParameterFromQuery]
+    public int StoreId { get; set; }
+
+    private string cardTypeName = "";
+    private int stampsToAdd = 1;
+    private bool cameraError = false;
+    private string errorMessage = "";
+
+    private bool showResult = false;
+    private bool resultSuccess = false;
+    private string resultTitle = "";
+    private string resultMessage = "";
+    private StampResult? stampResult;
+
+    private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState?.LoadFromStorage();
+        
+        if (AuthState == null || !AuthState.IsLoggedIn || !AuthState.IsStoreOwner)
+        {
+            Navigation?.NavigateTo("/");
+            return;
+        }
+
+        cardTypeName = CardTypeName ?? "Carta Fedeltà";
+        stampsToAdd = StampsToAdd > 0 ? StampsToAdd : 1;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Give DOM time to render
+            await Task.Delay(500);
+            await StartCamera();
+        }
+    }
+
+    private async Task StartCamera()
+    {
+        cameraError = false;
+        try
+        {
+            await JS.InvokeVoidAsync("startQRScanner", DotNetObjectReference.Create(this));
+        }
+        catch (Exception ex)
+        {
+            cameraError = true;
+            errorMessage = "Impossibile accedere alla fotocamera. Verifica i permessi.";
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnQRCodeScanned(string qrData)
+    {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        try
+        {
+            // Stop scanner while processing
+            await JS.InvokeVoidAsync("stopQRScanner");
+
+            // Parse QR data - expected format: "STAMPS:userId:userName" or just userId
+            var customerId = qrData;
+            if (qrData.StartsWith("STAMPS:"))
+            {
+                var parts = qrData.Split(':');
+                if (parts.Length >= 2)
+                {
+                    customerId = parts[1];
+                }
+            }
+
+            // Add stamp
+            var request = new
+            {
+                customerId = customerId,
+                storeOwnerId = AuthState?.UserId,
+                storeId = StoreId,
+                cardTypeId = CardTypeId,
+                stampsToAdd = stampsToAdd,
+                requiredStamps = 10
+            };
+
+            var response = await HttpClient.PostAsJsonAsync($"{BaseUrl}/api/stampcards/add-stamp", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                stampResult = await response.Content.ReadFromJsonAsync<StampResult>();
+                resultSuccess = true;
+                resultTitle = "Timbro Aggiunto!";
+                resultMessage = stampResult?.Message ?? "Operazione completata";
+            }
+            else
+            {
+                resultSuccess = false;
+                resultTitle = "Errore";
+                resultMessage = "Cliente non trovato o QR code non valido";
+            }
+        }
+        catch (Exception ex)
+        {
+            resultSuccess = false;
+            resultTitle = "Errore";
+            resultMessage = $"Errore di connessione: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+            showResult = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    [JSInvokable]
+    public void OnCameraError(string error)
+    {
+        cameraError = true;
+        errorMessage = error;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ScanAgain()
+    {
+        showResult = false;
+        stampResult = null;
+        await StartCamera();
+    }
+
+    private async Task GoBack()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("stopQRScanner");
+        }
+        catch { }
+        Navigation?.NavigateTo("/Store/Dashboard");
+    }
+
+    private class StampResult
+    {
+        public bool Success { get; set; }
+        public int CurrentStamps { get; set; }
+        public int RequiredStamps { get; set; }
+        public bool IsComplete { get; set; }
+        public string Message { get; set; } = "";
+    }
+}
+

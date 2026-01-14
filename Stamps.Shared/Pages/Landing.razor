@@ -1,0 +1,231 @@
+@page "/"
+
+<PageTitle>Welcome - Stamps</PageTitle>
+
+<style>
+    .landing-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .content {
+        text-align: center;
+    }
+
+    .welcome-text {
+        font-size: 3.5rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 1rem;
+        animation: fadeInDown 0.8s ease-out;
+    }
+
+    .subtitle {
+        color: rgba(255,255,255,0.9);
+        font-size: 1.2rem;
+        margin-bottom: 3rem;
+    }
+
+    .button-container {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 600px;
+        animation: fadeInUp 1s ease-out;
+    }
+
+    .user-type-button {
+        flex: 1;
+        min-width: 250px;
+        padding: 2rem;
+        background: white;
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .user-type-button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    }
+
+    .user-type-button:active {
+        transform: scale(0.95);
+    }
+
+    .user-type-button.customer {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .user-type-button.store {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+
+    .user-type-button.login {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .user-type-button.register {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+
+    .button-icon {
+        font-size: 3rem;
+    }
+
+    .button-text {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .back-button {
+        margin-top: 2rem;
+        background: transparent;
+        border: 2px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 50px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.5);
+    }
+
+    @@keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .welcome-text {
+            font-size: 2.5rem;
+        }
+        
+        .button-container {
+            flex-direction: column;
+        }
+        
+        .user-type-button {
+            min-width: 100%;
+        }
+    }
+</style>
+
+<div class="landing-container">
+    <div class="content">
+        @if (selectedUserType == null)
+        {
+            <h1 class="welcome-text">BENVENUTO</h1>
+            <p class="subtitle">Seleziona il tipo di account</p>
+            
+            <div class="button-container">
+                <button class="user-type-button customer" @onclick="@(() => SelectUserType("Client"))">
+                    <span class="button-icon">👤</span>
+                    <span class="button-text">UTENTE</span>
+                </button>
+                
+                <button class="user-type-button store" @onclick="@(() => SelectUserType("StoreOwner"))">
+                    <span class="button-icon">🏪</span>
+                    <span class="button-text">NEGOZIO</span>
+                </button>
+            </div>
+        }
+        else
+        {
+            <h1 class="welcome-text">@(selectedUserType == "Client" ? "UTENTE" : "NEGOZIO")</h1>
+            <p class="subtitle">Hai già un account?</p>
+            
+            <div class="button-container">
+                <button class="user-type-button login" @onclick="NavigateToLogin">
+                    <span class="button-text">ACCEDI</span>
+                </button>
+                
+                <button class="user-type-button register" @onclick="NavigateToRegister">
+                    <span class="button-text">REGISTRATI</span>
+                </button>
+            </div>
+            
+            <button class="back-button" @onclick="() => selectedUserType = null">
+                ← Indietro
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Inject] private NavigationManager? Navigation { get; set; }
+    [Inject] private AuthStateService? AuthState { get; set; }
+    
+    private string? selectedUserType = null;
+
+    protected override void OnInitialized()
+    {
+        // Load saved auth state from storage
+        AuthState?.LoadFromStorage();
+        
+        // If already logged in, redirect to appropriate dashboard
+        if (AuthState?.IsLoggedIn == true)
+        {
+            if (AuthState.IsCustomer)
+            {
+                Navigation?.NavigateTo("/Client/Dashboard");
+            }
+            else if (AuthState.IsStoreOwner)
+            {
+                Navigation?.NavigateTo("/Store/Dashboard");
+            }
+        }
+    }
+
+    private void SelectUserType(string userType)
+    {
+        selectedUserType = userType;
+    }
+    
+    private void NavigateToLogin()
+    {
+        Navigation?.NavigateTo($"/Account/Login?userType={selectedUserType}");
+    }
+    
+    private void NavigateToRegister()
+    {
+        Navigation?.NavigateTo($"/Account/Register?userType={selectedUserType}");
+    }
+}

@@ -1,0 +1,513 @@
+@page "/Account/Register"
+@using Microsoft.AspNetCore.Identity
+@using Stamps.Web.Data
+@implements IDisposable
+
+<PageTitle>Register - Stamps</PageTitle>
+
+<style>
+    .register-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .register-card {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        max-width: 500px;
+        width: 100%;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    .register-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+
+    .register-subtitle {
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.8rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-register {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .btn-register:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-register:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .signin-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: #666;
+    }
+
+    .signin-link a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+
+    .alert-danger {
+        background: #fee;
+        color: #c33;
+        border: 1px solid #fcc;
+    }
+
+    .alert-success {
+        background: #efe;
+        color: #3c3;
+        border: 1px solid #cfc;
+    }
+
+    .validation-message {
+        color: #c33;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .autocomplete-container {
+        position: relative;
+    }
+
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 2px solid #667eea;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .suggestion-item {
+        padding: 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s ease;
+    }
+
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+
+    .suggestion-item:hover {
+        background: #f8f9ff;
+    }
+
+    .suggestion-main {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .suggestion-details {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .loading-suggestions {
+        padding: 1rem;
+        text-align: center;
+        color: #667eea;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="register-container">
+    <div class="register-card">
+        <h1 class="register-title">Create Account</h1>
+        <p class="register-subtitle">
+            @if (selectedUserType == UserType.Client)
+            {
+                <span>Join as a Customer</span>
+            }
+            else
+            {
+                <span>Register as a Store Owner</span>
+            }
+        </p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">
+                @successMessage
+            </div>
+        }
+
+        <EditForm Model="@registerModel" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+            
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <InputText class="form-control" @bind-Value="registerModel.FullName" placeholder="Enter your full name" />
+                <ValidationMessage For="@(() => registerModel.FullName)" class="validation-message" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <InputText class="form-control" @bind-Value="registerModel.Email" placeholder="Enter your email" type="email" />
+                <ValidationMessage For="@(() => registerModel.Email)" class="validation-message" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <InputText class="form-control" @bind-Value="registerModel.Password" placeholder="Create a password" type="password" />
+                <ValidationMessage For="@(() => registerModel.Password)" class="validation-message" />
+                <small style="color: #666; font-size: 0.875rem;">At least 6 characters with uppercase, lowercase, and digit</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Confirm Password</label>
+                <InputText class="form-control" @bind-Value="registerModel.ConfirmPassword" placeholder="Confirm your password" type="password" />
+                <ValidationMessage For="@(() => registerModel.ConfirmPassword)" class="validation-message" />
+            </div>
+
+            @if (selectedUserType == UserType.StoreOwner)
+            {
+                <div class="form-group">
+                    <label class="form-label">Store Name</label>
+                    <InputText class="form-control" @bind-Value="registerModel.StoreName" placeholder="Enter your store name" />
+                    <ValidationMessage For="@(() => registerModel.StoreName)" class="validation-message" />
+                </div>
+
+                <div class="form-group autocomplete-container">
+                    <label class="form-label">Store Address</label>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        value="@addressQuery"
+                        @oninput="OnAddressInput"
+                        placeholder="Type your address (e.g., via antonio labriola 1)" 
+                        autocomplete="off" />
+                    
+                    @if (isSearching)
+                    {
+                        <div class="autocomplete-suggestions">
+                            <div class="loading-suggestions">Searching...</div>
+                        </div>
+                    }
+                    else if (suggestions.Any())
+                    {
+                        <div class="autocomplete-suggestions">
+                            @foreach (var suggestion in suggestions)
+                            {
+                                <div class="suggestion-item" @onclick="() => SelectAddress(suggestion)">
+                                    <div class="suggestion-main">@suggestion.Road</div>
+                                    <div class="suggestion-details">
+                                        @suggestion.City, @suggestion.PostalCode @suggestion.Country
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" class="form-control" @bind="registerModel.City" placeholder="City" readonly />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Postal Code</label>
+                    <input type="text" class="form-control" @bind="registerModel.PostalCode" placeholder="Postal code" readonly />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">State/Province</label>
+                    <input type="text" class="form-control" @bind="registerModel.State" placeholder="State or Province (optional)" readonly />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Country</label>
+                    <input type="text" class="form-control" @bind="registerModel.Country" placeholder="Country" readonly />
+                </div>
+            }
+
+            <button type="submit" class="btn-register" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>Creating Account...</span>
+                }
+                else
+                {
+                    <span>Create Account</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="signin-link">
+            Already have an account? <a href="/Account/Login">Sign In</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterModel registerModel = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isLoading = false;
+    private UserType selectedUserType = UserType.Client;
+    
+    private string addressQuery = string.Empty;
+    private List<AddressSuggestion> suggestions = new();
+    private bool isSearching = false;
+    private System.Threading.Timer? searchTimer;
+
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
+    [Inject] private SignInManager<ApplicationUser> SignInManager { get; set; } = default!;
+    [Inject] private ApplicationDbContext DbContext { get; set; } = default!;
+    [Inject] private IGeocodeService GeocodeService { get; set; } = default!;
+    [SupplyParameterFromQuery] private string? userType { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(userType))
+        {
+            selectedUserType = userType.Equals("StoreOwner", StringComparison.OrdinalIgnoreCase) 
+                ? UserType.StoreOwner 
+                : UserType.Client;
+        }
+    }
+
+    private void OnAddressInput(ChangeEventArgs e)
+    {
+        addressQuery = e.Value?.ToString() ?? string.Empty;
+        
+        // Debounce the search - wait 500ms after user stops typing
+        searchTimer?.Dispose();
+        searchTimer = new System.Threading.Timer(async _ =>
+        {
+            await SearchAddress();
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private async Task SearchAddress()
+    {
+        if (string.IsNullOrWhiteSpace(addressQuery) || addressQuery.Length < 3)
+        {
+            suggestions.Clear();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        isSearching = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            suggestions = await GeocodeService.SearchAddressAsync(addressQuery);
+        }
+        catch
+        {
+            suggestions.Clear();
+        }
+        finally
+        {
+            isSearching = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void SelectAddress(AddressSuggestion suggestion)
+    {
+        registerModel.StoreAddress = suggestion.Road;
+        registerModel.City = suggestion.City;
+        registerModel.State = suggestion.State;
+        registerModel.PostalCode = suggestion.PostalCode;
+        registerModel.Country = suggestion.Country;
+        registerModel.Latitude = suggestion.Latitude;
+        registerModel.Longitude = suggestion.Longitude;
+        
+        addressQuery = suggestion.Road;
+        suggestions.Clear();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        searchTimer?.Dispose();
+    }
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            if (registerModel.Password != registerModel.ConfirmPassword)
+            {
+                errorMessage = "Passwords do not match.";
+                isLoading = false;
+                return;
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = registerModel.Email,
+                Email = registerModel.Email,
+                FullName = registerModel.FullName,
+                UserType = selectedUserType
+            };
+
+            var result = await UserManager.CreateAsync(user, registerModel.Password);
+
+            if (result.Succeeded)
+            {
+                // If store owner, create the store with location
+                if (selectedUserType == UserType.StoreOwner && !string.IsNullOrEmpty(registerModel.StoreName))
+                {
+                    var store = new Store
+                    {
+                        Name = registerModel.StoreName,
+                        OwnerId = user.Id,
+                        Address = registerModel.StoreAddress,
+                        City = registerModel.City,
+                        State = registerModel.State,
+                        PostalCode = registerModel.PostalCode,
+                        Country = registerModel.Country,
+                        Latitude = registerModel.Latitude,
+                        Longitude = registerModel.Longitude
+                    };
+
+                    DbContext.Stores.Add(store);
+                    await DbContext.SaveChangesAsync();
+                }
+
+                await SignInManager.SignInAsync(user, isPersistent: false);
+                
+                if (selectedUserType == UserType.Client)
+                {
+                    NavigationManager.NavigateTo("/Client/Dashboard");
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("/Store/Dashboard");
+                }
+            }
+            else
+            {
+                errorMessage = string.Join(" ", result.Errors.Select(e => e.Description));
+            }
+        }
+        catch
+        {
+            errorMessage = "An error occurred. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class RegisterModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string FullName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(6)]
+        public string Password { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        // Store Owner specific fields
+        public string? StoreName { get; set; }
+        public string? StoreAddress { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? PostalCode { get; set; }
+        public string? Country { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
+    }
+}

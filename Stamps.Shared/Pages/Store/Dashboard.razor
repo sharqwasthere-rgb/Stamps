@@ -1,0 +1,965 @@
+@page "/Store/Dashboard"
+@inject NavigationManager Navigation
+@inject HttpClient HttpClient
+@inject Stamps.Shared.Services.AuthStateService AuthState
+@inject Stamps.Shared.Services.IPermissionService PermissionService
+@inject Stamps.Shared.Services.IScannerService ScannerService
+
+<PageTitle>Dashboard Negozio - Stamps</PageTitle>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .store-dashboard {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 20px;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom, 20px));
+    }
+
+    .header {
+        color: white;
+        margin-bottom: 25px;
+    }
+
+    .header h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+
+    .header p {
+        color: rgba(255,255,255,0.7);
+        margin-top: 5px;
+        font-size: 0.9rem;
+    }
+
+    /* Card Type Selection */
+    .card-type-section {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .card-types-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .card-type-item {
+        background: rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .card-type-item.selected {
+        border-color: #FFD700;
+        background: rgba(255,215,0,0.2);
+    }
+
+    .card-type-info h3 {
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .card-type-info p {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.85rem;
+        margin-top: 3px;
+    }
+
+    .card-type-stamps {
+        background: #FFD700;
+        color: #333;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .add-card-type-btn {
+        width: 100%;
+        padding: 15px;
+        background: transparent;
+        border: 2px dashed rgba(255,255,255,0.3);
+        border-radius: 12px;
+        color: rgba(255,255,255,0.7);
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .add-card-type-btn:hover {
+        border-color: rgba(255,255,255,0.5);
+        color: white;
+    }
+
+    /* Scan Section */
+    .scan-section {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 20px;
+    }
+
+    .scan-section h2 {
+        font-size: 1.2rem;
+        color: #333;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .scan-button {
+        width: 100%;
+        padding: 25px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        transition: transform 0.2s;
+    }
+
+    .scan-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .scan-button:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+
+    .stamps-selector {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .stamps-selector label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .stamps-input {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .stamps-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid #667eea;
+        background: white;
+        color: #667eea;
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stamps-btn:active {
+        background: #667eea;
+        color: white;
+    }
+
+    .stamps-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    .manual-input {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .manual-input p {
+        color: #666;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .manual-input input {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .manual-input input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .add-stamp-btn {
+        width: 100%;
+        padding: 15px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    .add-stamp-btn:disabled {
+        background: #ccc;
+    }
+
+    /* No Card Type Warning */
+    .no-card-warning {
+        background: rgba(255,193,7,0.2);
+        border: 2px solid #FFC107;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+    }
+
+    .no-card-warning h3 {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .no-card-warning p {
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.8);
+        margin-bottom: 15px;
+    }
+
+    .create-first-btn {
+        background: #FFC107;
+        color: #333;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    /* Create Card Type Modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        padding: 20px;
+    }
+
+    .modal-overlay.show {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .modal-card {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        width: 100%;
+        max-width: 400px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-card h2 {
+        font-size: 1.3rem;
+        color: #333;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+
+    .form-group input, .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .modal-btn {
+        flex: 1;
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+
+    .modal-btn.cancel {
+        background: #f5f5f5;
+        color: #666;
+    }
+
+    .modal-btn.save {
+        background: #667eea;
+        color: white;
+    }
+
+    /* Result Modal */
+    .result-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    .result-overlay.show {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .result-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        width: 90%;
+        max-width: 350px;
+        text-align: center;
+    }
+
+    .result-card.success {
+        border-top: 5px solid #28a745;
+    }
+
+    .result-card.error {
+        border-top: 5px solid #dc3545;
+    }
+
+    .result-icon {
+        font-size: 4rem;
+        margin-bottom: 15px;
+    }
+
+    .result-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+
+    .result-card p {
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .result-card .stamps-info {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .result-card .stamps-count {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+
+    .close-result-btn {
+        width: 100%;
+        padding: 15px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    /* Bottom Nav */
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 15px 20px;
+        padding-bottom: calc(15px + env(safe-area-inset-bottom, 20px));
+        display: flex;
+        justify-content: space-around;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #666;
+        font-size: 0.75rem;
+    }
+
+    .nav-item.active {
+        color: #667eea;
+    }
+
+    .nav-item svg {
+        width: 24px;
+        height: 24px;
+        margin-bottom: 5px;
+    }
+
+    .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        color: white;
+    }
+</style>
+
+<div class="store-dashboard">
+    <div class="header">
+        <h1>@(storeName ?? "Il tuo Negozio")</h1>
+        <p>Benvenuto, @(AuthState?.FullName ?? "Proprietario")</p>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading">Caricamento...</div>
+    }
+    else
+    {
+        <!-- Card Type Selection -->
+        <div class="card-type-section">
+            <div class="section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                    <line x1="7" y1="8" x2="17" y2="8"></line>
+                    <line x1="7" y1="12" x2="12" y2="12"></line>
+                </svg>
+                Tipo Carta Fedeltà
+            </div>
+
+            @if (cardTypes.Count == 0)
+            {
+                <div class="no-card-warning">
+                    <h3>Nessuna carta creata</h3>
+                    <p>Crea la tua prima carta fedeltà per iniziare a raccogliere timbri</p>
+                    <button class="create-first-btn" @onclick="ShowCreateModal">
+                        + Crea Prima Carta
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="card-types-list">
+                    @foreach (var cardType in cardTypes)
+                    {
+                        <div class="card-type-item @(selectedCardType?.Id == cardType.Id ? "selected" : "")" 
+                             @onclick="() => SelectCardType(cardType)">
+                            <div class="card-type-info">
+                                <h3>@cardType.Name</h3>
+                                <p>@(cardType.RewardDescription ?? "Premio al completamento")</p>
+                            </div>
+                            <div class="card-type-stamps">@cardType.RequiredStamps timbri</div>
+                        </div>
+                    }
+                    <button class="add-card-type-btn" @onclick="ShowCreateModal">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Aggiungi Tipo Carta
+                    </button>
+                </div>
+            }
+        </div>
+
+        <!-- Scan Section -->
+        @if (cardTypes.Count > 0)
+        {
+            <div class="scan-section">
+                <h2>Aggiungi Timbro</h2>
+                
+                <button class="scan-button" @onclick="StartScanning" disabled="@(selectedCardType == null)" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    @(selectedCardType == null ? "Seleziona una carta" : "Scansiona QR Cliente")
+                </button>
+
+                <div class="stamps-selector">
+                    <label>Timbri da aggiungere:</label>
+                    <div class="stamps-input">
+                        <button class="stamps-btn" @onclick="DecreaseStamps" type="button">−</button>
+                        <span class="stamps-value">@stampsToAdd</span>
+                        <button class="stamps-btn" @onclick="IncreaseStamps" type="button">+</button>
+                    </div>
+                </div>
+
+                <div class="manual-input">
+                    <p>Oppure inserisci ID cliente manualmente:</p>
+                    <input type="text" @bind="manualCustomerId" placeholder="ID Cliente" />
+                    <button class="add-stamp-btn" @onclick="AddStampManually" 
+                            disabled="@(string.IsNullOrEmpty(manualCustomerId) || selectedCardType == null || isProcessing)">
+                        @(isProcessing ? "Elaborazione..." : "Aggiungi Timbro")
+                    </button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- Create Card Type Modal -->
+<div class="modal-overlay @(showCreateModal ? "show" : "")">
+    <div class="modal-card">
+        <h2>Nuova Carta Fedeltà</h2>
+        
+        <div class="form-group">
+            <label>Nome Carta *</label>
+            <input type="text" @bind="newCardType.Name" placeholder="es. Carta Caffè" />
+        </div>
+        
+        <div class="form-group">
+            <label>Descrizione</label>
+            <textarea @bind="newCardType.Description" placeholder="Descrizione opzionale" rows="2"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Timbri Richiesti *</label>
+            <input type="number" @bind="newCardType.RequiredStamps" min="1" max="50" />
+        </div>
+        
+        <div class="form-group">
+            <label>Premio</label>
+            <input type="text" @bind="newCardType.RewardDescription" placeholder="es. Caffè gratis" />
+        </div>
+
+        <div class="modal-buttons">
+            <button class="modal-btn cancel" @onclick="HideCreateModal">Annulla</button>
+            <button class="modal-btn save" @onclick="CreateCardType" disabled="@(string.IsNullOrEmpty(newCardType.Name))">
+                Crea
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Result Modal -->
+<div class="result-overlay @(showResult ? "show" : "")">
+    <div class="result-card @(resultSuccess ? "success" : "error")">
+        <div class="result-icon">@(resultSuccess ? "✓" : "✗")</div>
+        <h3>@resultTitle</h3>
+        <p>@resultMessage</p>
+        @if (resultSuccess && lastStampResult != null)
+        {
+            <div class="stamps-info">
+                <div class="stamps-count">@lastStampResult.CurrentStamps / @lastStampResult.RequiredStamps</div>
+                <div>Timbri</div>
+                @if (lastStampResult.IsComplete)
+                {
+                    <div style="color: #28a745; font-weight: 600; margin-top: 10px;">🎉 Carta Completata!</div>
+                }
+            </div>
+        }
+        <button class="close-result-btn" @onclick="CloseResult">OK</button>
+    </div>
+</div>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <button class="nav-item active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        Home
+    </button>
+    <button class="nav-item" @onclick="GoToStats">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        Statistiche
+    </button>
+    <button class="nav-item" @onclick="GoToSettings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Impostazioni
+    </button>
+</div>
+
+@code {
+    private const string BaseUrl = "https://byssal-janene-lyingly.ngrok-free.dev";
+    
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private string? storeName;
+    private int storeId;
+
+    private List<CardTypeItem> cardTypes = new();
+    private CardTypeItem? selectedCardType;
+    
+    private string manualCustomerId = "";
+    private int stampsToAdd = 1;
+
+    private bool showCreateModal = false;
+    private NewCardType newCardType = new();
+
+    private bool showResult = false;
+    private bool resultSuccess = false;
+    private string resultTitle = "";
+    private string resultMessage = "";
+    private AddStampResponse? lastStampResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState?.LoadFromStorage();
+        
+        if (AuthState == null || !AuthState.IsLoggedIn || !AuthState.IsStoreOwner)
+        {
+            Navigation?.NavigateTo("/");
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            // Get store info
+            var storeResponse = await HttpClient.GetAsync($"{BaseUrl}/api/stores/owner/{AuthState?.UserId}");
+            if (storeResponse.IsSuccessStatusCode)
+            {
+                var store = await storeResponse.Content.ReadFromJsonAsync<StoreInfo>();
+                if (store != null)
+                {
+                    storeName = store.Name;
+                    storeId = store.Id;
+                }
+            }
+
+            // Get card types
+            var cardTypesResponse = await HttpClient.GetAsync($"{BaseUrl}/api/stampcardtypes/owner/{AuthState?.UserId}");
+            if (cardTypesResponse.IsSuccessStatusCode)
+            {
+                var types = await cardTypesResponse.Content.ReadFromJsonAsync<List<CardTypeItem>>();
+                if (types != null)
+                {
+                    cardTypes = types;
+                    if (cardTypes.Count == 1)
+                    {
+                        selectedCardType = cardTypes[0];
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectCardType(CardTypeItem cardType)
+    {
+        selectedCardType = cardType;
+    }
+
+    private void IncreaseStamps()
+    {
+        if (stampsToAdd < 10) stampsToAdd++;
+    }
+
+    private void DecreaseStamps()
+    {
+        if (stampsToAdd > 1) stampsToAdd--;
+    }
+
+    private async Task StartScanning()
+    {
+        if (selectedCardType == null)
+        {
+            resultSuccess = false;
+            resultTitle = "Seleziona Carta";
+            resultMessage = "Devi selezionare un tipo di carta prima di scansionare.";
+            showResult = true;
+            return;
+        }
+
+        try
+        {
+            var status = await PermissionService.CheckCameraPermissionAsync();
+            
+            if (status != Stamps.Shared.Services.PermissionStatus.Granted)
+            {
+                status = await PermissionService.RequestCameraPermissionAsync();
+                
+                if (status != Stamps.Shared.Services.PermissionStatus.Granted)
+                {
+                    resultSuccess = false;
+                    resultTitle = "Permesso Negato";
+                    resultMessage = "Non hai consentito l'accesso alla fotocamera. Vai nelle impostazioni del telefono per abilitarlo, oppure usa l'inserimento manuale.";
+                    showResult = true;
+                    return;
+                }
+            }
+            
+            // Open native scanner
+            await ScannerService.OpenScannerAsync(
+                selectedCardType.Id, 
+                selectedCardType.Name, 
+                stampsToAdd, 
+                storeId, 
+                AuthState?.UserId ?? "");
+        }
+        catch (Exception ex)
+        {
+            resultSuccess = false;
+            resultTitle = "Errore";
+            resultMessage = $"Errore: {ex.Message}";
+            showResult = true;
+        }
+    }
+
+    private async Task AddStampManually()
+    {
+        if (string.IsNullOrEmpty(manualCustomerId) || selectedCardType == null || isProcessing) return;
+
+        isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new
+            {
+                customerId = manualCustomerId.Trim(),
+                storeOwnerId = AuthState?.UserId,
+                storeId = storeId,
+                cardTypeId = selectedCardType.Id,
+                stampsToAdd = stampsToAdd,
+                requiredStamps = selectedCardType.RequiredStamps
+            };
+
+            var response = await HttpClient.PostAsJsonAsync($"{BaseUrl}/api/stampcards/add-stamp", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                lastStampResult = await response.Content.ReadFromJsonAsync<AddStampResponse>();
+                resultSuccess = true;
+                resultTitle = "Timbro Aggiunto!";
+                resultMessage = lastStampResult?.Message ?? "Operazione completata";
+                manualCustomerId = "";
+                stampsToAdd = 1;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                resultSuccess = false;
+                resultTitle = "Errore";
+                resultMessage = "Cliente non trovato o errore nel sistema";
+            }
+        }
+        catch (Exception ex)
+        {
+            resultSuccess = false;
+            resultTitle = "Errore";
+            resultMessage = $"Errore di connessione: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+            showResult = true;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        newCardType = new NewCardType { RequiredStamps = 10 };
+        showCreateModal = true;
+    }
+
+    private void HideCreateModal()
+    {
+        showCreateModal = false;
+    }
+
+    private async Task CreateCardType()
+    {
+        if (string.IsNullOrEmpty(newCardType.Name)) return;
+
+        try
+        {
+            var request = new
+            {
+                ownerId = AuthState?.UserId,
+                name = newCardType.Name,
+                description = newCardType.Description,
+                requiredStamps = newCardType.RequiredStamps,
+                rewardDescription = newCardType.RewardDescription
+            };
+
+            var response = await HttpClient.PostAsJsonAsync($"{BaseUrl}/api/stampcardtypes", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                showCreateModal = false;
+                await LoadData();
+                
+                resultSuccess = true;
+                resultTitle = "Carta Creata!";
+                resultMessage = $"La carta '{newCardType.Name}' è stata creata con successo.";
+                showResult = true;
+            }
+            else
+            {
+                resultSuccess = false;
+                resultTitle = "Errore";
+                resultMessage = "Impossibile creare la carta. Riprova.";
+                showResult = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            resultSuccess = false;
+            resultTitle = "Errore";
+            resultMessage = $"Errore: {ex.Message}";
+            showResult = true;
+        }
+    }
+
+    private void CloseResult()
+    {
+        showResult = false;
+        lastStampResult = null;
+    }
+
+    private void GoToStats() => Navigation?.NavigateTo("/Store/Stats");
+    private void GoToSettings() => Navigation?.NavigateTo("/Store/Settings");
+
+    private class StoreInfo
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    private class CardTypeItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public int RequiredStamps { get; set; }
+        public string? RewardDescription { get; set; }
+    }
+
+    private class NewCardType
+    {
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public int RequiredStamps { get; set; } = 10;
+        public string? RewardDescription { get; set; }
+    }
+
+    private class AddStampResponse
+    {
+        public bool Success { get; set; }
+        public int TransactionId { get; set; }
+        public int StampCardId { get; set; }
+        public string StoreName { get; set; } = "";
+        public int CurrentStamps { get; set; }
+        public int RequiredStamps { get; set; }
+        public bool IsComplete { get; set; }
+        public string Message { get; set; } = "";
+    }
+}

@@ -1,0 +1,226 @@
+@page "/Store/Stats"
+@inject NavigationManager Navigation
+@inject HttpClient HttpClient
+@inject Stamps.Shared.Services.AuthStateService AuthState
+
+<PageTitle>Statistiche - Stamps</PageTitle>
+
+<style>
+    .stats-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 20px;
+        padding-bottom: 100px;
+    }
+
+    .back-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        margin-bottom: 20px;
+    }
+
+    .page-title {
+        color: white;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 30px;
+    }
+
+    .stats-card {
+        background: rgba(255,255,255,0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+
+    .stats-card h3 {
+        color: #FFD700;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        color: white;
+    }
+
+    .stat-row:last-child {
+        border-bottom: none;
+    }
+
+    .stat-label {
+        color: rgba(255,255,255,0.7);
+    }
+
+    .stat-value {
+        font-weight: 700;
+        color: #FFD700;
+    }
+
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-around;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #666;
+        font-size: 0.75rem;
+    }
+
+    .nav-item.active {
+        color: #667eea;
+    }
+
+    .nav-item svg {
+        width: 24px;
+        height: 24px;
+        margin-bottom: 5px;
+    }
+</style>
+
+<div class="stats-page">
+    <button class="back-btn" @onclick="GoBack">← Indietro</button>
+    <h1 class="page-title">Statistiche</h1>
+
+    <div class="stats-card">
+        <h3>📊 Panoramica</h3>
+        <div class="stat-row">
+            <span class="stat-label">Clienti Totali</span>
+            <span class="stat-value">@totalCustomers</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Carte Attive</span>
+            <span class="stat-value">@activeCards</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Carte Completate</span>
+            <span class="stat-value">@completedCards</span>
+        </div>
+    </div>
+
+    <div class="stats-card">
+        <h3>🎯 Timbri</h3>
+        <div class="stat-row">
+            <span class="stat-label">Timbri Oggi</span>
+            <span class="stat-value">@todayStamps</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Timbri Totali</span>
+            <span class="stat-value">@totalStampsIssued</span>
+        </div>
+    </div>
+
+    <div class="stats-card">
+        <h3>🎁 Premi</h3>
+        <div class="stat-row">
+            <span class="stat-label">Premi Riscattati</span>
+            <span class="stat-value">@totalRedemptions</span>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <button class="nav-item" @onclick="GoToDashboard">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        Home
+    </button>
+    <button class="nav-item active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        Statistiche
+    </button>
+    <button class="nav-item" @onclick="GoToSettings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Impostazioni
+    </button>
+</div>
+
+@code {
+    private int totalCustomers;
+    private int todayStamps;
+    private int activeCards;
+    private int completedCards;
+    private int totalStampsIssued;
+    private int totalRedemptions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthState?.LoadFromStorage();
+        
+        if (AuthState == null || !AuthState.IsLoggedIn || !AuthState.IsStoreOwner)
+        {
+            Navigation?.NavigateTo("/");
+            return;
+        }
+
+        await LoadStats();
+    }
+
+    private async Task LoadStats()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync($"https://byssal-janene-lyingly.ngrok-free.dev/api/stores/owner/{AuthState?.UserId}/stats");
+            if (response.IsSuccessStatusCode)
+            {
+                var stats = await response.Content.ReadFromJsonAsync<StoreStats>();
+                if (stats != null)
+                {
+                    totalCustomers = stats.TotalCustomers;
+                    todayStamps = stats.TodayStamps;
+                    activeCards = stats.ActiveCards;
+                    completedCards = stats.CompletedCards;
+                    totalStampsIssued = stats.TotalStampsIssued;
+                    totalRedemptions = stats.TotalRedemptions;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading stats: {ex.Message}");
+        }
+    }
+
+    private void GoBack() => Navigation?.NavigateTo("/Store/Dashboard");
+    private void GoToDashboard() => Navigation?.NavigateTo("/Store/Dashboard");
+    private void GoToSettings() => Navigation?.NavigateTo("/Store/Settings");
+
+    private class StoreStats
+    {
+        public int TotalCustomers { get; set; }
+        public int TodayStamps { get; set; }
+        public int ActiveCards { get; set; }
+        public int CompletedCards { get; set; }
+        public int TotalStampsIssued { get; set; }
+        public int TotalRedemptions { get; set; }
+    }
+}
+

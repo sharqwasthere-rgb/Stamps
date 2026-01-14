@@ -1,0 +1,12 @@
+﻿@inherits LayoutComponentBase
+@inject AuthStateService AuthState
+
+@Body
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Load saved auth state from storage when app starts
+        AuthState.LoadFromStorage();
+    }
+}

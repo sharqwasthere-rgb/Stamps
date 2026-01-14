@@ -1,0 +1,255 @@
+@page "/Client/Dashboard"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>My Stamps - Stamps</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>My Stamp Cards</h2>
+        <button class="btn btn-primary" @onclick="ShowQRCode">
+            <i class="bi bi-qr-code"></i> Show My QR Code
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (stampCards == null || !stampCards.Any())
+    {
+        <div class="alert alert-info">
+            <h5>No stamp cards yet</h5>
+            <p>Visit a store and have them scan your QR code to get started!</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var card in stampCards)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 @(card.IsComplete ? "border-success" : "")">
+                        <div class="card-body">
+                            <h5 class="card-title">@card.CardName</h5>
+                            <p class="text-muted mb-2">@card.Store.Name</p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar @(card.IsComplete ? "bg-success" : "")" 
+                                     role="progressbar" 
+                                     style="width: @(Math.Min(100, (card.CurrentStamps * 100.0 / card.RequiredStamps)))%">
+                                    @card.CurrentStamps / @card.RequiredStamps
+                                </div>
+                            </div>
+                            @if (card.IsComplete)
+                            {
+                                <button class="btn btn-success w-100" @onclick="() => RedeemCard(card.Id)">
+                                    <i class="bi bi-gift"></i> Redeem Reward
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="mt-5">
+        <h3>Purchase History</h3>
+        <div class="card">
+            <div class="card-body">
+                @if (transactions == null || !transactions.Any())
+                {
+                    <p class="text-muted">No transactions yet.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Store</th>
+                                    <th>Type</th>
+                                    <th>Stamps</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var transaction in transactions)
+                                {
+                                    <tr>
+                                        <td>@transaction.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                                        <td>@transaction.Store.Name</td>
+                                        <td>
+                                            @if (transaction.Type == TransactionType.StampAdded)
+                                            {
+                                                <span class="badge bg-primary">Added</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Redeemed</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (transaction.Type == TransactionType.StampAdded)
+                                            {
+                                                <span class="text-success">+@transaction.StampsAdded</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-danger">-@transaction.StampsRedeemed</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showQRModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">My QR Code</h5>
+                    <button type="button" class="btn-close" @onclick="CloseQRCode"></button>
+                </div>
+                <div class="modal-body text-center">
+                    @if (!string.IsNullOrEmpty(qrCodeImage))
+                    {
+                        <img src="data:image/png;base64,@qrCodeImage" alt="QR Code" class="img-fluid mb-3" />
+                        <p class="text-muted">Show this QR code to store owners to add stamps</p>
+                        <p class="text-warning"><small>Expires in 5 minutes</small></p>
+                    }
+                    else
+                    {
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Generating QR Code...</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showRedeemModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Redeem Reward</h5>
+                    <button type="button" class="btn-close" @onclick="CloseRedeemModal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    @if (!string.IsNullOrEmpty(redeemQRCodeImage))
+                    {
+                        <img src="data:image/png;base64,@redeemQRCodeImage" alt="Redemption QR Code" class="img-fluid mb-3" />
+                        <p class="text-muted">Show this QR code to the store owner to redeem your reward</p>
+                        <p class="text-warning"><small>Expires in 5 minutes</small></p>
+                    }
+                    else
+                    {
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Generating QR Code...</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<StampCard>? stampCards;
+    private List<Transaction>? transactions;
+    private bool isLoading = true;
+    private bool showQRModal = false;
+    private bool showRedeemModal = false;
+    private string? qrCodeImage;
+    private string? redeemQRCodeImage;
+
+    [Inject] private IStampService StampService { get; set; } = default!;
+    [Inject] private IQRCodeService QRCodeService { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            stampCards = await StampService.GetUserStampCardsAsync(user.Id);
+            transactions = await StampService.GetUserTransactionsAsync(user.Id);
+        }
+
+        isLoading = false;
+    }
+
+    private async Task ShowQRCode()
+    {
+        showQRModal = true;
+        qrCodeImage = null;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            var token = await QRCodeService.CreateTokenAsync(user.Id, QRTokenType.AddStamps);
+            var qrBytes = QRCodeService.GenerateQRCodeImage(token);
+            qrCodeImage = Convert.ToBase64String(qrBytes);
+        }
+
+        StateHasChanged();
+    }
+
+    private void CloseQRCode()
+    {
+        showQRModal = false;
+        qrCodeImage = null;
+    }
+
+    private async Task RedeemCard(int cardId)
+    {
+        showRedeemModal = true;
+        redeemQRCodeImage = null;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            var token = await QRCodeService.CreateTokenAsync(user.Id, QRTokenType.Redemption, cardId);
+            var qrBytes = QRCodeService.GenerateQRCodeImage(token);
+            redeemQRCodeImage = Convert.ToBase64String(qrBytes);
+        }
+
+        StateHasChanged();
+    }
+
+    private void CloseRedeemModal()
+    {
+        showRedeemModal = false;
+        redeemQRCodeImage = null;
+    }
+}
+

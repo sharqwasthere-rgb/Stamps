@@ -1,0 +1,16 @@
+﻿@inject AuthStateService AuthState
+
+<Router AppAssembly="typeof(Layout.MainLayout).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Load auth state immediately when app starts, before any page renders
+        AuthState.LoadFromStorage();
+    }
+}

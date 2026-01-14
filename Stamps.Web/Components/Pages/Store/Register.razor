@@ -1,0 +1,120 @@
+@page "/Store/Register"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Register Store - Stamps</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h2 class="card-title text-center mb-4">Register Your Store</h2>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @errorMessage
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success" role="alert">
+                            @successMessage
+                        </div>
+                    }
+
+                    <EditForm Model="@storeModel" OnValidSubmit="HandleRegister">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Store Name</label>
+                            <InputText id="name" class="form-control" @bind-Value="storeModel.Name" />
+                            <ValidationMessage For="@(() => storeModel.Name)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <InputTextArea id="description" class="form-control" @bind-Value="storeModel.Description" rows="3" />
+                            <ValidationMessage For="@(() => storeModel.Description)" />
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Register Store
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private StoreModel storeModel = new();
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isLoading = false;
+
+    [Inject] private ApplicationDbContext DbContext { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserManager.GetUserAsync(authState.User);
+
+            if (user == null || user.UserType != UserType.StoreOwner)
+            {
+                errorMessage = "Only store owners can register stores.";
+                isLoading = false;
+                return;
+            }
+
+            var store = new Store
+            {
+                Name = storeModel.Name,
+                Description = storeModel.Description,
+                OwnerId = user.Id
+            };
+
+            DbContext.Stores.Add(store);
+            await DbContext.SaveChangesAsync();
+
+            successMessage = "Store registered successfully!";
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo("/Store/Dashboard");
+        }
+        catch
+        {
+            errorMessage = "An error occurred. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class StoreModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Name { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+    }
+}
+

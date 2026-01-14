@@ -1,0 +1,244 @@
+@page "/Client/Profile"
+
+<PageTitle>Profilo - Stamps</PageTitle>
+
+<style>
+    .profile-container {
+        min-height: 100vh;
+        background: #FFFFFF;
+        padding: 30px 20px;
+    }
+
+    .header {
+        margin-bottom: 40px;
+    }
+
+    .back-button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .user-info {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .user-avatar {
+        width: 80px;
+        height: 80px;
+        background: #f0f0f0;
+        border-radius: 50%;
+        margin: 0 auto 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .user-avatar svg {
+        width: 40px;
+        height: 40px;
+        stroke: #666;
+    }
+
+    .user-name {
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+
+    .user-email {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .settings-list {
+        margin-top: 30px;
+    }
+
+    .setting-item {
+        background: #f8f8f8;
+        padding: 18px 20px;
+        margin-bottom: 12px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        border: none;
+        width: 100%;
+        text-align: left;
+        transition: background 0.2s;
+    }
+
+    .setting-item:active {
+        background: #e8e8e8;
+    }
+
+    .setting-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .setting-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .setting-icon svg {
+        width: 100%;
+        height: 100%;
+        stroke: #333;
+    }
+
+    .setting-text {
+        font-size: 16px;
+        color: #333;
+        font-weight: 500;
+    }
+
+    .logout-button {
+        width: 100%;
+        padding: 18px;
+        background: #FF4444;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 40px;
+        transition: background 0.2s;
+    }
+
+    .logout-button:active {
+        background: #cc0000;
+    }
+</style>
+
+<div class="profile-container">
+    <div class="header">
+        <button class="back-button" @onclick="GoBack">←</button>
+    </div>
+
+    <div class="user-info">
+        <div class="user-avatar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+        </div>
+        <div class="user-name">@userName</div>
+        <div class="user-email">@userEmail</div>
+    </div>
+
+    <div class="settings-list">
+        <button class="setting-item">
+            <div class="setting-left">
+                <div class="setting-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <span class="setting-text">Modifica Profilo</span>
+            </div>
+        </button>
+
+        <button class="setting-item" @onclick="ToggleLanguage">
+            <div class="setting-left">
+                <div class="setting-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                </div>
+                <span class="setting-text">@(currentLanguage == "it" ? "Lingua: Italiano" : "Language: English")</span>
+            </div>
+        </button>
+
+        <button class="setting-item">
+            <div class="setting-left">
+                <div class="setting-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m5.2-13.2-4.2 4.2m-2 2-4.2 4.2M23 12h-6m-6 0H5m13.2 5.2-4.2-4.2m-2-2-4.2-4.2"></path>
+                    </svg>
+                </div>
+                <span class="setting-text">Impostazioni</span>
+            </div>
+        </button>
+
+        <button class="setting-item">
+            <div class="setting-left">
+                <div class="setting-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4m0-4h.01"></path>
+                    </svg>
+                </div>
+                <span class="setting-text">Aiuto</span>
+            </div>
+        </button>
+
+        <button class="setting-item">
+            <div class="setting-left">
+                <div class="setting-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <span class="setting-text">Privacy & Termini</span>
+            </div>
+        </button>
+    </div>
+
+    <button class="logout-button" @onclick="Logout">
+        Esci
+    </button>
+</div>
+
+@code {
+    [Inject] private NavigationManager? Navigation { get; set; }
+    [Inject] private Stamps.Shared.Services.AuthStateService? AuthState { get; set; }
+    
+    private string currentLanguage = "it";
+    private string? userName;
+    private string? userEmail;
+
+    protected override void OnInitialized()
+    {
+        AuthState?.LoadFromStorage();
+        userName = AuthState?.FullName ?? "Utente";
+        userEmail = AuthState?.Email ?? "";
+    }
+
+    private void GoBack()
+    {
+        Navigation?.NavigateTo("/Client/Dashboard");
+    }
+
+    private void ToggleLanguage()
+    {
+        currentLanguage = currentLanguage == "it" ? "en" : "it";
+        StateHasChanged();
+    }
+
+    private void Logout()
+    {
+        AuthState?.Logout();
+        Navigation?.NavigateTo("/");
+    }
+}
+

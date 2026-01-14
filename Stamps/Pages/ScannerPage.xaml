@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
+             x:Class="Stamps.Pages.ScannerPage"
+             Title="Scanner QR"
+             Shell.NavBarIsVisible="False">
+    
+    <Grid BackgroundColor="Black">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="20" BackgroundColor="#80000000">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="50"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Grid.Column="0" 
+                    Text="←" 
+                    FontSize="24"
+                    BackgroundColor="#40FFFFFF"
+                    TextColor="White"
+                    CornerRadius="25"
+                    HeightRequest="50"
+                    WidthRequest="50"
+                    Clicked="OnBackClicked"/>
+            
+            <Label Grid.Column="1" 
+                   Text="Scansiona QR Cliente" 
+                   TextColor="White"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+        </Grid>
+
+        <!-- Camera View -->
+        <zxing:CameraBarcodeReaderView 
+            x:Name="barcodeReader"
+            Grid.Row="1"
+            IsDetecting="True"
+            BarcodesDetected="OnBarcodesDetected"/>
+
+        <!-- Scan Frame Overlay -->
+        <Grid Grid.Row="1" InputTransparent="True">
+            <BoxView Color="#80000000"/>
+            <Frame BackgroundColor="Transparent" 
+                   BorderColor="White" 
+                   CornerRadius="20"
+                   HeightRequest="280"
+                   WidthRequest="280"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+        </Grid>
+
+        <!-- Info Panel -->
+        <StackLayout Grid.Row="2" 
+                     Padding="20,30" 
+                     BackgroundColor="#80000000"
+                     Spacing="10">
+            
+            <Frame BackgroundColor="#FFD700" 
+                   CornerRadius="20" 
+                   Padding="10,8"
+                   HorizontalOptions="Center"
+                   HasShadow="False">
+                <Label x:Name="cardTypeLabel" 
+                       Text="Carta Fedeltà" 
+                       TextColor="#333"
+                       FontAttributes="Bold"/>
+            </Frame>
+            
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Spacing="5">
+                <Label Text="Timbri da aggiungere:" TextColor="White" FontSize="16"/>
+                <Label x:Name="stampsLabel" Text="1" TextColor="#FFD700" FontSize="24" FontAttributes="Bold"/>
+            </StackLayout>
+            
+            <Label Text="Inquadra il QR code del cliente" 
+                   TextColor="#AAAAAA" 
+                   FontSize="14"
+                   HorizontalOptions="Center"/>
+        </StackLayout>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,132 @@
+@page "/privacy-policy"
+
+<PageTitle>Privacy Policy - Stamps</PageTitle>
+
+<style>
+    .privacy-container {
+        min-height: 100vh;
+        background: #fff;
+        padding: 20px;
+    }
+
+    .header {
+        margin-bottom: 30px;
+    }
+
+    .back-button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        color: #333;
+    }
+
+    h1 {
+        font-size: 24px;
+        font-weight: 700;
+        color: #333;
+        margin: 20px 0;
+    }
+
+    h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+        margin: 25px 0 10px;
+    }
+
+    p {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+
+    ul {
+        margin: 10px 0 15px 20px;
+        color: #666;
+        font-size: 14px;
+    }
+
+    li {
+        margin-bottom: 8px;
+        line-height: 1.5;
+    }
+
+    .last-updated {
+        font-size: 12px;
+        color: #999;
+        margin-top: 30px;
+    }
+</style>
+
+<div class="privacy-container">
+    <div class="header">
+        <button class="back-button" @onclick="GoBack">←</button>
+    </div>
+
+    <h1>Privacy Policy</h1>
+
+    <p>Stamps ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and share information about you when you use our mobile application.</p>
+
+    <h2>Information We Collect</h2>
+    <p>We collect information you provide directly to us:</p>
+    <ul>
+        <li><strong>Account Information:</strong> Name, email address, and password when you register</li>
+        <li><strong>Profile Information:</strong> Information you add to your profile</li>
+        <li><strong>Transaction Data:</strong> Records of stamps collected and rewards redeemed</li>
+        <li><strong>Location Data:</strong> With your permission, we collect location data to show nearby stores</li>
+    </ul>
+
+    <h2>How We Use Your Information</h2>
+    <p>We use the information we collect to:</p>
+    <ul>
+        <li>Provide, maintain, and improve our services</li>
+        <li>Process transactions and send related information</li>
+        <li>Send you technical notices and support messages</li>
+        <li>Respond to your comments and questions</li>
+        <li>Show you nearby participating stores</li>
+    </ul>
+
+    <h2>Information Sharing</h2>
+    <p>We do not sell your personal information. We may share your information:</p>
+    <ul>
+        <li>With store owners when you collect stamps or redeem rewards</li>
+        <li>To comply with legal obligations</li>
+        <li>To protect our rights and prevent fraud</li>
+    </ul>
+
+    <h2>Data Security</h2>
+    <p>We implement appropriate security measures to protect your personal information. However, no method of transmission over the Internet is 100% secure.</p>
+
+    <h2>Your Rights</h2>
+    <p>You have the right to:</p>
+    <ul>
+        <li>Access your personal data</li>
+        <li>Correct inaccurate data</li>
+        <li>Request deletion of your data</li>
+        <li>Opt-out of marketing communications</li>
+    </ul>
+
+    <h2>Children's Privacy</h2>
+    <p>Our service is not directed to children under 13. We do not knowingly collect information from children under 13.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
+
+    <h2>Contact Us</h2>
+    <p>If you have questions about this Privacy Policy, please contact us at: privacy@stamps.app</p>
+
+    <p class="last-updated">Last updated: November 2025</p>
+</div>
+
+@code {
+    [Inject] private NavigationManager? Navigation { get; set; }
+
+    private void GoBack()
+    {
+        Navigation?.NavigateTo("/");
+    }
+}
+

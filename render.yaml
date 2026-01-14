@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: stamps-api
+    env: dotnet
+    buildCommand: dotnet publish Stamps.Web/Stamps.Web.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/Stamps.Web.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false  # Set this in Render dashboard
+      - key: PORT
+        value: 8080

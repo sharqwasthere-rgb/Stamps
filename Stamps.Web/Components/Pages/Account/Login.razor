@@ -1,0 +1,291 @@
+@page "/Account/Login"
+@using Microsoft.AspNetCore.Identity
+@using Stamps.Web.Data
+
+<PageTitle>Sign In - Stamps</PageTitle>
+
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        max-width: 450px;
+        width: 100%;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    .login-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+
+    .login-subtitle {
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.8rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .btn-login:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-login:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .divider {
+        text-align: center;
+        margin: 2rem 0 1.5rem;
+        position: relative;
+    }
+
+    .divider::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+        background: #e0e0e0;
+    }
+
+    .divider span {
+        background: white;
+        padding: 0 1rem;
+        position: relative;
+        color: #666;
+    }
+
+    .btn-google {
+        width: 100%;
+        padding: 1rem;
+        background: white;
+        color: #333;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-google:hover {
+        border-color: #667eea;
+        background: #f8f9ff;
+    }
+
+    .signup-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: #666;
+    }
+
+    .signup-link a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+
+    .alert-danger {
+        background: #fee;
+        color: #c33;
+        border: 1px solid #fcc;
+    }
+
+    .validation-message {
+        color: #c33;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="login-container">
+    <div class="login-card">
+        <h1 class="login-title">Welcome Back</h1>
+        <p class="login-subtitle">Sign in to continue</p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <InputText class="form-control" @bind-Value="loginModel.Email" placeholder="Enter your email" type="email" />
+                <ValidationMessage For="@(() => loginModel.Email)" class="validation-message" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <InputText class="form-control" @bind-Value="loginModel.Password" placeholder="Enter your password" type="password" />
+                <ValidationMessage For="@(() => loginModel.Password)" class="validation-message" />
+            </div>
+
+            <button type="submit" class="btn-login" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>Signing In...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="divider">
+            <span>or</span>
+        </div>
+
+        <form method="post" action="/Account/ExternalLogin?provider=Google&returnUrl=/">
+            <button type="submit" class="btn-google">
+                Sign in with Google
+            </button>
+        </form>
+
+        <div class="signup-link">
+            Don't have an account? <a href="/">Sign Up</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string? errorMessage;
+    private bool isLoading = false;
+
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private SignInManager<ApplicationUser> SignInManager { get; set; } = default!;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await SignInManager.PasswordSignInAsync(
+                loginModel.Email,
+                loginModel.Password,
+                loginModel.RememberMe,
+                lockoutOnFailure: false);
+
+            if (result.Succeeded)
+            {
+                var user = await SignInManager.UserManager.FindByEmailAsync(loginModel.Email);
+                if (user != null)
+                {
+                    if (user.UserType == UserType.Client)
+                    {
+                        NavigationManager.NavigateTo("/Client/Dashboard");
+                    }
+                    else
+                    {
+                        NavigationManager.NavigateTo("/Store/Dashboard");
+                    }
+                }
+            }
+            else
+            {
+                errorMessage = "Invalid email or password.";
+            }
+        }
+        catch
+        {
+            errorMessage = "An error occurred. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; }
+    }
+}

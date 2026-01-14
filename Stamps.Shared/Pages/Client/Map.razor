@@ -1,0 +1,309 @@
+@page "/Client/Map"
+
+<PageTitle>Trova Negozi - Stamps</PageTitle>
+
+<style>
+    .map-container {
+        min-height: 100vh;
+        background: #FFFFFF;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .header {
+        padding: 20px;
+        background: white;
+        border-bottom: 1px solid #eee;
+    }
+
+    .back-button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        color: #333;
+    }
+
+    .page-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-top: 15px;
+        color: #333;
+    }
+
+    .search-box {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        font-size: 16px;
+        margin-top: 15px;
+        outline: none;
+    }
+
+    .search-box:focus {
+        border-color: #667eea;
+    }
+
+    .map-area {
+        flex: 1;
+        background: #e8f4f8;
+        position: relative;
+        min-height: 300px;
+    }
+
+    .map-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        font-size: 14px;
+    }
+
+    .stores-list {
+        padding: 20px;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+    .stores-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+    }
+
+    .store-card {
+        background: #f8f8f8;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .store-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .store-icon svg {
+        width: 24px;
+        height: 24px;
+        stroke: white;
+    }
+
+    .store-info {
+        flex: 1;
+    }
+
+    .store-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+    }
+
+    .store-address {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 4px;
+    }
+
+    .store-distance {
+        font-size: 12px;
+        color: #999;
+    }
+
+    .store-stamps {
+        background: #667eea;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+
+    .no-stores {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+    }
+</style>
+
+<div class="map-container">
+    <div class="header">
+        <button class="back-button" @onclick="GoBack">←</button>
+        <h1 class="page-title">Trova Negozi</h1>
+        <input type="text" class="search-box" placeholder="Cerca negozi..." @bind="searchQuery" @bind:event="oninput" />
+    </div>
+
+    <div class="map-area">
+        <div class="map-placeholder">
+            @if (!string.IsNullOrEmpty(locationMessage))
+            {
+                <span>@locationMessage</span>
+            }
+            else if (locationGranted)
+            {
+                <span>📍 Posizione attiva - Mappa in arrivo...</span>
+            }
+            else
+            {
+                <span>Mappa in arrivo...</span>
+            }
+        </div>
+    </div>
+
+    <div class="stores-list">
+        <div class="stores-title">Negozi vicino a te</div>
+        
+        @if (isLoading)
+        {
+            <div class="loading">Caricamento...</div>
+        }
+        else if (filteredStores.Count == 0)
+        {
+            <div class="no-stores">Nessun negozio trovato</div>
+        }
+        else
+        {
+            @foreach (var store in filteredStores)
+            {
+                <div class="store-card">
+                    <div class="store-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </div>
+                    <div class="store-info">
+                        <div class="store-name">@store.Name</div>
+                        <div class="store-address">@store.Address</div>
+                        <div class="store-distance">@store.Distance km</div>
+                    </div>
+                    <div class="store-stamps">@store.StampsRequired punti</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Inject] private NavigationManager? Navigation { get; set; }
+    [Inject] private HttpClient? HttpClient { get; set; }
+    [Inject] private Stamps.Shared.Services.IPermissionService? PermissionService { get; set; }
+
+    private string searchQuery = "";
+    private bool isLoading = true;
+    private bool locationGranted = false;
+    private string locationMessage = "";
+    private List<StoreItem> stores = new();
+    private List<StoreItem> filteredStores => string.IsNullOrEmpty(searchQuery) 
+        ? stores 
+        : stores.Where(s => s.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) 
+            || s.Address.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckLocationPermission();
+        await LoadStores();
+    }
+
+    private async Task CheckLocationPermission()
+    {
+        if (PermissionService == null) return;
+        
+        try
+        {
+            var status = await PermissionService.CheckLocationPermissionAsync();
+            
+            if (status != Stamps.Shared.Services.PermissionStatus.Granted)
+            {
+                locationMessage = "Consenti la posizione per vedere dove ti trovi sulla mappa";
+                status = await PermissionService.RequestLocationPermissionAsync();
+            }
+            
+            locationGranted = status == Stamps.Shared.Services.PermissionStatus.Granted;
+            if (locationGranted)
+            {
+                locationMessage = "";
+            }
+        }
+        catch
+        {
+            locationGranted = false;
+        }
+    }
+
+    private async Task LoadStores()
+    {
+        isLoading = true;
+        
+        try
+        {
+            // Try to load from API
+            if (HttpClient != null)
+            {
+                var response = await HttpClient.GetFromJsonAsync<List<StoreItem>>("https://byssal-janene-lyingly.ngrok-free.dev/api/stores");
+                if (response != null)
+                {
+                    stores = response;
+                }
+            }
+        }
+        catch
+        {
+            // Use sample data if API fails
+            stores = GetSampleStores();
+        }
+
+        if (stores.Count == 0)
+        {
+            stores = GetSampleStores();
+        }
+
+        isLoading = false;
+    }
+
+    private List<StoreItem> GetSampleStores()
+    {
+        return new List<StoreItem>
+        {
+            new StoreItem { Name = "Caffè Roma", Address = "Via Roma 45, Milano", Distance = "0.3", StampsRequired = 10 },
+            new StoreItem { Name = "Pizzeria Napoli", Address = "Corso Italia 12, Milano", Distance = "0.5", StampsRequired = 8 },
+            new StoreItem { Name = "Gelateria Dolce", Address = "Piazza Duomo 7, Milano", Distance = "0.8", StampsRequired = 6 },
+            new StoreItem { Name = "Bar Sport", Address = "Via Montenapoleone 23, Milano", Distance = "1.2", StampsRequired = 10 },
+            new StoreItem { Name = "Pasticceria Milano", Address = "Via Torino 89, Milano", Distance = "1.5", StampsRequired = 12 }
+        };
+    }
+
+    private void GoBack()
+    {
+        Navigation?.NavigateTo("/Client/Dashboard");
+    }
+
+    private class StoreItem
+    {
+        public string Name { get; set; } = "";
+        public string Address { get; set; } = "";
+        public string Distance { get; set; } = "";
+        public int StampsRequired { get; set; }
+    }
+}

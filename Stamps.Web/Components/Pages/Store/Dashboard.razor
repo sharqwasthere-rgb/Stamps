@@ -1,0 +1,347 @@
+@page "/Store/Dashboard"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Store Dashboard - Stamps</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Store Dashboard</h2>
+        <div>
+            <button class="btn btn-primary me-2" @onclick="ShowScanModal">
+                <i class="bi bi-qr-code-scan"></i> Scan QR Code
+            </button>
+            <a href="/Store/Register" class="btn btn-outline-primary">
+                <i class="bi bi-plus-circle"></i> Add Store
+            </a>
+        </div>
+    </div>
+
+    @if (stores == null || !stores.Any())
+    {
+        <div class="alert alert-info">
+            <h5>No stores yet</h5>
+            <p>Register your first store to get started!</p>
+            <a href="/Store/Register" class="btn btn-primary">Register Store</a>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            @foreach (var store in stores)
+            {
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">@store.Name</h5>
+                            <p class="text-muted">@store.Description</p>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewStoreStats(store.Id)">
+                                View Statistics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (selectedStoreId.HasValue && storeStats != null)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h5>Statistics for @stores.First(s => s.Id == selectedStoreId).Name</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h6>Total Customers</h6>
+                                    <h3>@storeStats.TotalCustomers</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h6>Total Stamp Cards</h6>
+                                    <h3>@storeStats.TotalStampCards</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h6>Stamps Issued</h6>
+                                    <h3>@storeStats.TotalStampsIssued</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h6>Redemptions</h6>
+                                    <h3>@storeStats.TotalRedemptions</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (showScanModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Scan QR Code</h5>
+                    <button type="button" class="btn-close" @onclick="CloseScanModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (selectedStoreId == null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Select Store</label>
+                            <select class="form-select" @onchange="OnStoreSelected">
+                                <option value="">-- Select Store --</option>
+                                @if (stores != null)
+                                {
+                                    @foreach (var store in stores)
+                                    {
+                                        <option value="@store.Id">@store.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    @if (selectedStoreId.HasValue)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Card Name (for new cards)</label>
+                            <input type="text" class="form-control" @bind="newCardName" placeholder="e.g., Coffee Card" />
+                            <small class="form-text text-muted">Enter a name for the stamp card.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Required Stamps for Reward</label>
+                            <input type="number" class="form-control" @bind="requiredStamps" min="1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Stamps to Add</label>
+                            <input type="number" class="form-control" @bind="stampsToAdd" min="1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">QR Code Data</label>
+                            <input type="text" class="form-control" @bind="scannedQRCode" placeholder="Paste QR code data or scan" />
+                            <small class="form-text text-muted">Paste the QR code token here</small>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(scanMessage))
+                        {
+                            <div class="alert @(scanSuccess ? "alert-success" : "alert-danger")">
+                                @scanMessage
+                            </div>
+                        }
+
+                        <div class="d-grid">
+                            <button class="btn btn-primary" @onclick="ProcessQRCode" disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Process QR Code
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Store>? stores;
+    private StoreStatistics? storeStats;
+    private bool showScanModal = false;
+    private int? selectedStoreId;
+    private int stampsToAdd = 1;
+    private string? scannedQRCode;
+    private string? scanMessage;
+    private bool scanSuccess = false;
+    private bool isProcessing = false;
+    private string newCardName = "Default Card";
+    private int requiredStamps = 10;
+
+    [Inject] private IStampService StampService { get; set; } = default!;
+    [Inject] private IQRCodeService QRCodeService { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] private UserManager<ApplicationUser> UserManager { get; set; } = default!;
+    [Inject] private ApplicationDbContext DbContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStores();
+    }
+
+    private async Task LoadStores()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            stores = await DbContext.Stores.Where(s => s.OwnerId == user.Id).ToListAsync();
+        }
+    }
+
+    private void ShowScanModal()
+    {
+        showScanModal = true;
+        selectedStoreId = null;
+        scannedQRCode = null;
+        scanMessage = null;
+        stampsToAdd = 1;
+        newCardName = "Default Card";
+        requiredStamps = 10;
+    }
+
+    private void CloseScanModal()
+    {
+        showScanModal = false;
+        selectedStoreId = null;
+        scannedQRCode = null;
+        scanMessage = null;
+    }
+
+    private void OnStoreSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int storeId))
+        {
+            selectedStoreId = storeId;
+        }
+    }
+
+    private async Task ProcessQRCode()
+    {
+        if (string.IsNullOrEmpty(scannedQRCode) || !selectedStoreId.HasValue || string.IsNullOrEmpty(newCardName))
+        {
+            scanMessage = "Please fill in all required fields.";
+            scanSuccess = false;
+            return;
+        }
+
+        isProcessing = true;
+        scanMessage = null;
+
+        try
+        {
+            var token = await QRCodeService.ValidateTokenAsync(scannedQRCode);
+            
+            if (token == null || !token.IsValid)
+            {
+                scanMessage = "Invalid or expired QR code.";
+                scanSuccess = false;
+                isProcessing = false;
+                return;
+            }
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserManager.GetUserAsync(authState.User);
+
+            if (user == null)
+            {
+                scanMessage = "User not found.";
+                scanSuccess = false;
+                isProcessing = false;
+                return;
+            }
+
+            if (token.Type == QRTokenType.AddStamps)
+            {
+                var stampCard = await DbContext.StampCards
+                    .FirstOrDefaultAsync(sc => sc.UserId == token.UserId && sc.StoreId == selectedStoreId.Value && sc.CardName == newCardName);
+
+                if (stampCard == null)
+                {
+                    stampCard = new StampCard
+                    {
+                        StoreId = selectedStoreId.Value,
+                        UserId = token.UserId,
+                        CardName = newCardName,
+                        RequiredStamps = requiredStamps
+                    };
+                    DbContext.StampCards.Add(stampCard);
+                    await DbContext.SaveChangesAsync();
+                }
+
+                var success = await StampService.AddStampsAsync(token.UserId, selectedStoreId.Value, stampCard.Id, stampsToAdd, user.Id);
+                
+                if (success)
+                {
+                    await QRCodeService.MarkTokenAsUsedAsync(scannedQRCode);
+                    scanMessage = $"Successfully added {stampsToAdd} stamp(s)!";
+                    scanSuccess = true;
+                    scannedQRCode = null;
+                }
+                else
+                {
+                    scanMessage = "Failed to add stamps.";
+                    scanSuccess = false;
+                }
+            }
+            else if (token.Type == QRTokenType.Redemption)
+            {
+                if (token.StampCardId == null)
+                {
+                    scanMessage = "Invalid redemption token.";
+                    scanSuccess = false;
+                    isProcessing = false;
+                    return;
+                }
+
+                var success = await StampService.RedeemStampsAsync(token.UserId, token.StampCardId.Value, user.Id);
+                
+                if (success)
+                {
+                    await QRCodeService.MarkTokenAsUsedAsync(scannedQRCode);
+                    scanMessage = "Reward redeemed successfully!";
+                    scanSuccess = true;
+                    scannedQRCode = null;
+                }
+                else
+                {
+                    scanMessage = "Failed to redeem. Customer may not have enough stamps.";
+                    scanSuccess = false;
+                }
+            }
+        }
+        catch
+        {
+            scanMessage = "An error occurred. Please try again.";
+            scanSuccess = false;
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task ViewStoreStats(int storeId)
+    {
+        selectedStoreId = storeId;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null)
+        {
+            storeStats = await StampService.GetStoreStatisticsAsync(storeId, user.Id);
+        }
+    }
+}
+
