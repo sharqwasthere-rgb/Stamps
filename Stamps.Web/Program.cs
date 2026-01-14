@@ -18,6 +18,9 @@ Log.Logger = new LoggerConfiguration()
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
 
+// Add environment variables to configuration (for Render, Railway, etc.)
+builder.Configuration.AddEnvironmentVariables();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -55,12 +58,10 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 
 // Add Entity Framework and PostgreSQL (Supabase)
-// Try multiple ways to get connection string (Render, Railway, etc.)
+// Get connection string from configuration (which includes environment variables)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? builder.Configuration["ConnectionStrings:DefaultConnection"]
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL")
-    ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found. Please set it in appsettings.json or DATABASE_URL environment variable.");
+    ?? builder.Configuration["DATABASE_URL"]
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found. Please set DATABASE_URL environment variable or ConnectionStrings:DefaultConnection in appsettings.json.");
 
 // Handle Supabase connection string format if needed (postgres://user:pass@host:port/db)
 if (connectionString.StartsWith("postgres://"))
