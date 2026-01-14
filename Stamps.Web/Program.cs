@@ -37,6 +37,14 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 // Add HttpContextAccessor for audit fields
 builder.Services.AddHttpContextAccessor();
 
+// Add session support (for WebPreferencesService)
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 // Add Rate Limiting
 builder.Services.AddMemoryCache();
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
@@ -56,6 +64,12 @@ builder.Services.AddCors(options =>
 
 // Add device-specific services used by the Stamps.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
+
+// Add Preferences Service for web (uses session storage)
+builder.Services.AddSingleton<IPreferencesService, WebPreferencesService>();
+
+// Add Auth State Service (used by Blazor components)
+builder.Services.AddSingleton<AuthStateService>();
 
 // Add Entity Framework and PostgreSQL (Supabase)
 // Get connection string from configuration (which includes environment variables)
@@ -160,6 +174,9 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseCors();
+
+// Enable session (required for WebPreferencesService)
+app.UseSession();
 
 // Use Rate Limiting
 app.UseIpRateLimiting();
