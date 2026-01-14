@@ -36,8 +36,7 @@ namespace Stamps
             
             // Add HttpClient for direct API calls
             builder.Services.AddScoped(sp => {
-                var client = new HttpClient { BaseAddress = new Uri("https://byssal-janene-lyingly.ngrok-free.dev") };
-                client.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
+                var client = new HttpClient { BaseAddress = new Uri("https://stamps-ecxm.onrender.com") };
                 return client;
             });
 

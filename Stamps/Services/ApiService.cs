@@ -7,7 +7,7 @@ namespace Stamps.Services;
 public class ApiService : IApiService
 {
     private readonly HttpClient _httpClient;
-    private const string BaseUrl = "https://byssal-janene-lyingly.ngrok-free.dev"; // ngrok tunnel for real device
+    private const string BaseUrl = "https://stamps-ecxm.onrender.com"; // Render deployment
 
     public ApiService(HttpClient httpClient)
     {
