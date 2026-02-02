@@ -35,30 +35,12 @@ public class ApiService : IApiService
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"Error response: {errorContent}");
-                
-                try
+                var friendlyMessage = GetErrorMessageFromBody(errorContent, response.StatusCode);
+                return new ApiResponse<AuthResponse>
                 {
-                    var errorObj = JsonSerializer.Deserialize<ErrorResponse>(errorContent, new JsonSerializerOptions 
-                    { 
-                        PropertyNameCaseInsensitive = true 
-                    });
-                    return new ApiResponse<AuthResponse>
-                    {
-                        Success = false,
-                        ErrorMessage = errorObj?.Message ?? $"Registration failed. Status: {response.StatusCode}"
-                    };
-                }
-                catch
-                {
-                    // If JSON deserialization fails, return the raw error content
-                    return new ApiResponse<AuthResponse>
-                    {
-                        Success = false,
-                        ErrorMessage = !string.IsNullOrWhiteSpace(errorContent) 
-                            ? errorContent 
-                            : $"Registration failed. Status: {response.StatusCode}"
-                    };
-                }
+                    Success = false,
+                    ErrorMessage = friendlyMessage
+                };
             }
         }
         catch (Exception ex)
@@ -91,11 +73,11 @@ public class ApiService : IApiService
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                var errorObj = JsonSerializer.Deserialize<ErrorResponse>(errorContent);
+                var friendlyMessage = GetErrorMessageFromBody(errorContent, response.StatusCode);
                 return new ApiResponse<AuthResponse>
                 {
                     Success = false,
-                    ErrorMessage = errorObj?.Message ?? "Login failed."
+                    ErrorMessage = friendlyMessage ?? "Login failed."
                 };
             }
         }
@@ -107,6 +89,47 @@ public class ApiService : IApiService
                 ErrorMessage = $"Connection error: {ex.Message}"
             };
         }
+    }
+
+    /// <summary>
+    /// Parses API error body: either { "message": "..." } or ProblemDetails (title, errors, detail).
+    /// </summary>
+    private static string GetErrorMessageFromBody(string errorContent, System.Net.HttpStatusCode statusCode)
+    {
+        if (string.IsNullOrWhiteSpace(errorContent))
+            return $"Request failed ({(int)statusCode}).";
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        try
+        {
+            using var doc = JsonDocument.Parse(errorContent);
+            var root = doc.RootElement;
+            // Our API returns { "message": "..." }
+            if (root.TryGetProperty("message", out var msg))
+                return msg.GetString() ?? errorContent;
+            // ProblemDetails: "title" and optionally "errors" or "detail"
+            if (root.TryGetProperty("title", out var title))
+            {
+                var titleStr = title.GetString();
+                if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var prop in errors.EnumerateObject())
+                        foreach (var val in prop.Value.EnumerateArray())
+                        {
+                            var s = val.GetString();
+                            if (!string.IsNullOrWhiteSpace(s))
+                                return $"{titleStr}: {s}";
+                        }
+                }
+                if (root.TryGetProperty("detail", out var detail))
+                {
+                    var d = detail.GetString();
+                    if (!string.IsNullOrWhiteSpace(d)) return d;
+                }
+                return titleStr ?? errorContent;
+            }
+        }
+        catch { }
+        return errorContent.Length > 200 ? errorContent[..200] + "…" : errorContent;
     }
 
     private class ErrorResponse

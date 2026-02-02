@@ -35,6 +35,13 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
+        _logger.LogInformation("Register called: Email={Email}, FullName={FullName}, UserType={UserType}, HasPassword={HasPassword}, HasConfirmPassword={HasConfirm}",
+            request?.Email ?? "(null)", request?.FullName ?? "(null)", request?.UserType ?? "(null)",
+            !string.IsNullOrEmpty(request?.Password), !string.IsNullOrEmpty(request?.ConfirmPassword));
+
+        if (request == null)
+            return BadRequest(new { message = "Request body is required." });
+
         if (request.Password != request.ConfirmPassword)
         {
             return BadRequest(new { message = "Passwords do not match." });
