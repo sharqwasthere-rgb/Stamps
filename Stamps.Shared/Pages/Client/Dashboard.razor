@@ -507,7 +507,7 @@
     {
         try
         {
-            var response = await HttpClient.GetAsync($"https://byssal-janene-lyingly.ngrok-free.dev/api/stampcards/user/{AuthState?.UserId}");
+            var response = await HttpClient.GetAsync($"https://stamps-ecxm.onrender.com/api/stampcards/user/{AuthState?.UserId}");
             if (response.IsSuccessStatusCode)
             {
                 stampCards = await response.Content.ReadFromJsonAsync<List<StampCardDto>>() ?? new();
@@ -530,7 +530,7 @@
         try
         {
             var response = await HttpClient.GetFromJsonAsync<QRCodeResponse>(
-                $"https://byssal-janene-lyingly.ngrok-free.dev/api/qrcode/user/{AuthState?.UserId}"
+                $"https://stamps-ecxm.onrender.com/api/qrcode/user/{AuthState?.UserId}"
             );
             
             if (response != null)
@@ -549,7 +549,7 @@
         try
         {
             var response = await HttpClient.GetAsync(
-                $"https://byssal-janene-lyingly.ngrok-free.dev/api/stampcards/user/{AuthState?.UserId}/recent?since={lastPollTime:o}"
+                $"https://stamps-ecxm.onrender.com/api/stampcards/user/{AuthState?.UserId}/recent?since={lastPollTime:o}"
             );
             
             if (response.IsSuccessStatusCode)

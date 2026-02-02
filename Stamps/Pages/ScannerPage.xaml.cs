@@ -6,7 +6,7 @@ namespace Stamps.Pages;
 public partial class ScannerPage : ContentPage
 {
     private readonly HttpClient _httpClient;
-    private readonly string _baseUrl = "https://byssal-janene-lyingly.ngrok-free.dev";
+    private readonly string _baseUrl = "https://stamps-ecxm.onrender.com";
     
     private int _cardTypeId;
     private string _cardTypeName = "";
@@ -54,15 +54,26 @@ public partial class ScannerPage : ContentPage
         
         var qrData = result.Value;
         
-        // Parse QR data - expected format: "STAMPS:userId:userName" or just userId
-        var customerId = qrData;
-        if (qrData.StartsWith("STAMPS:"))
+        // Parse QR data - backend generates JSON format: {"Type":"CustomerID","UserId":"...","UserName":"...","Generated":"..."}
+        string customerId;
+        try
         {
-            var parts = qrData.Split(':');
-            if (parts.Length >= 2)
+            var qrObj = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(qrData);
+            if (qrObj.TryGetProperty("Type", out var type) && type.GetString() == "CustomerID" &&
+                qrObj.TryGetProperty("UserId", out var userId))
             {
-                customerId = parts[1];
+                customerId = userId.GetString() ?? qrData; // Fallback to raw data if parsing fails
             }
+            else
+            {
+                // Fallback: try to parse as simple userId string (for backward compatibility)
+                customerId = qrData;
+            }
+        }
+        catch
+        {
+            // If JSON parsing fails, assume it's just the userId string
+            customerId = qrData;
         }
         
         await MainThread.InvokeOnMainThreadAsync(async () =>
