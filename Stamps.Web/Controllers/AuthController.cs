@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Stamps.Web.Data;
 using Stamps.Web.Services;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Stamps.Web.Controllers;
 
@@ -217,29 +218,48 @@ public class AuthController : ControllerBase
 public class RegisterRequest
 {
     [Required]
+    [JsonPropertyName("fullName")]
     public string FullName { get; set; } = string.Empty;
 
     [Required]
     [EmailAddress]
+    [JsonPropertyName("email")]
     public string Email { get; set; } = string.Empty;
 
     [Required]
     [MinLength(6)]
+    [JsonPropertyName("password")]
     public string Password { get; set; } = string.Empty;
 
     [Required]
+    [JsonPropertyName("confirmPassword")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
+    [JsonPropertyName("userType")]
     public string? UserType { get; set; }
-    
-    // Store Owner fields
+
+    [JsonPropertyName("storeName")]
     public string? StoreName { get; set; }
+
+    [JsonPropertyName("storeAddress")]
     public string? StoreAddress { get; set; }
+
+    [JsonPropertyName("city")]
     public string? City { get; set; }
+
+    [JsonPropertyName("state")]
     public string? State { get; set; }
+
+    [JsonPropertyName("postalCode")]
     public string? PostalCode { get; set; }
+
+    [JsonPropertyName("country")]
     public string? Country { get; set; }
+
+    [JsonPropertyName("latitude")]
     public double? Latitude { get; set; }
+
+    [JsonPropertyName("longitude")]
     public double? Longitude { get; set; }
 }
 
@@ -247,9 +267,11 @@ public class LoginRequest
 {
     [Required]
     [EmailAddress]
+    [JsonPropertyName("email")]
     public string Email { get; set; } = string.Empty;
 
     [Required]
+    [JsonPropertyName("password")]
     public string Password { get; set; } = string.Empty;
 }
 

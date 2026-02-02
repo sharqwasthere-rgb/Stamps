@@ -19,7 +19,8 @@ public class ApiService : IApiService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/auth/register", request);
+            var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var response = await _httpClient.PostAsJsonAsync("/api/auth/register", request, jsonOptions);
             
             if (response.IsSuccessStatusCode)
             {
@@ -75,7 +76,8 @@ public class ApiService : IApiService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/auth/login", request);
+            var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var response = await _httpClient.PostAsJsonAsync("/api/auth/login", request, jsonOptions);
             
             if (response.IsSuccessStatusCode)
             {

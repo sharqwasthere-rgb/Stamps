@@ -25,8 +25,12 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Add Controllers for API endpoints
-builder.Services.AddControllers();
+// Add Controllers for API endpoints (case-insensitive JSON so app can send PascalCase or camelCase)
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 
 // Add ProblemDetails for standardized error responses
 builder.Services.AddProblemDetails();
