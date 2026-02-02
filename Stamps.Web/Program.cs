@@ -105,7 +105,11 @@ if (connectionString.StartsWith("postgres://"))
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString, npgsql =>
+    {
+        // Supabase free tier can be slow when cold; avoid timeout during reading
+        npgsql.CommandTimeout(90);
+    }));
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
